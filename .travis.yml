@@ -1,5 +1,7 @@
 language: rust
+
 sudo: required
+
 matrix:
   include:
     - rust: 1.12.0
@@ -18,9 +20,11 @@ matrix:
       env:
       - FEATURES='use_union use_generic_array'
       - NODROP_FEATURES='use_union'
+
 branches:
   only:
     - master
+
 script:
   - |
       ([ ! -z "$NODROP_FEATURES" ] || cargo build --verbose --features "$FEATURES") &&
@@ -32,8 +36,10 @@ script:
       ([ "$NODEFAULT" != 1 ] || cargo build --verbose --manifest-path=nodrop/Cargo.toml --no-default-features) &&
       cargo test --verbose --manifest-path=nodrop/Cargo.toml --features "$NODROP_FEATURES" &&
       cargo bench --verbose --manifest-path=nodrop/Cargo.toml --features "$NODROP_FEATURES" -- --test
+
 before_install:
   - sudo apt-get update
+
 addons:
   apt:
     packages:
@@ -43,6 +49,7 @@ addons:
       - cmake
       - gcc
       - binutils-dev
+
 after_success: |
   wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
   tar xzf master.tar.gz &&
@@ -54,6 +61,6 @@ after_success: |
   sudo make install &&
   cd ../.. &&
   rm -rf kcov-master &&
-  for file in target/debug/examplerust-*; do mkdir -p "target/cov/$(basename $file)"; kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
+  for file in target/debug/arraydeque-*; do mkdir -p "target/cov/$(basename $file)"; kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
   bash <(curl -s https://codecov.io/bash) &&
   echo "Uploaded code coverage"

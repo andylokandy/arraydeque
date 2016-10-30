@@ -6,6 +6,9 @@ This crate is inspired by [**bluss/arrayvec**]
 
 [**bluss/arrayvec**]: https://github.com/bluss/arrayvec
 
+[![Build Status](https://travis-ci.org/goandylok/arraydeque.svg?branch=master)](https://travis-ci.org/goandylok/arraydeque)
+[![codecov](https://codecov.io/gh/goandylok/arraydeque/branch/master/graph/badge.svg)](https://codecov.io/gh/goandylok/arraydeque)
+
 ## Feature Flags
 
 The **arraydeque** crate has the following cargo feature flags:
