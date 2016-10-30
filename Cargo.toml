@@ -7,7 +7,7 @@ license = "MIT/Apache-2.0"
 description = "A ring buffer with a fixed capacity, it can be stored on the stack too. Based on bluss/arrayvec."
 repository = "https://github.com/goandylok/arraydeque"
 
-keywords = ["ring", "circular", "buffer", "stack", "vector", "array", "data-structure", "no_std"]
+keywords = ["ring", "circular", "stack", "array", "no_std"]
 
 [dependencies.odds]
 version = "0.2.12"
