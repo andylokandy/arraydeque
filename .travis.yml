@@ -1,4 +1,5 @@
 language: rust
+sudo: required
 matrix:
   include:
     - rust: 1.12.0
@@ -42,7 +43,6 @@ addons:
       - cmake
       - gcc
       - binutils-dev
-
 after_success: |
   wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
   tar xzf master.tar.gz &&
