@@ -140,6 +140,9 @@
 //!
 //! # Generic Array
 //! ```toml
+//! [dependencies]
+//! generic-array = "0.5.1"
+//!
 //! [dependencies.arraydeque]
 //! version = "0.1.2"
 //! features = ["use_generic_array"]
