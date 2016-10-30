@@ -1,13 +1,13 @@
 #`arraydeque`
 
+[![Build Status](https://travis-ci.org/goandylok/arraydeque.svg?branch=master)](https://travis-ci.org/goandylok/arraydeque)
+[![codecov](https://codecov.io/gh/goandylok/arraydeque/branch/master/graph/badge.svg)](https://codecov.io/gh/goandylok/arraydeque)
+
 A circular buffer with fixed capacity.  Requires Rust 1.12+.
 
 This crate is inspired by [**bluss/arrayvec**]
 
 [**bluss/arrayvec**]: https://github.com/bluss/arrayvec
-
-[![Build Status](https://travis-ci.org/goandylok/arraydeque.svg?branch=master)](https://travis-ci.org/goandylok/arraydeque)
-[![codecov](https://codecov.io/gh/goandylok/arraydeque/branch/master/graph/badge.svg)](https://codecov.io/gh/goandylok/arraydeque)
 
 ## Feature Flags
 
