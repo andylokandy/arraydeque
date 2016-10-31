@@ -15,7 +15,6 @@
 //!
 //! - `std`
 //!   - Optional, enabled by default
-//!   - Requires Rust 1.6 *to disable*
 //!   - Use libstd
 //!
 //!
