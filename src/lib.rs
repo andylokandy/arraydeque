@@ -1873,6 +1873,7 @@ fn count(tail: usize, head: usize, capacity: usize) -> usize {
 }
 
 /// `ArrayDeque` iterator
+#[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 #[derive(Clone)]
 pub struct Iter<'a, T: 'a> {
     ring: &'a [T],
@@ -1914,6 +1915,7 @@ impl<'a, T> DoubleEndedIterator for Iter<'a, T> {
 impl<'a, T> ExactSizeIterator for Iter<'a, T> {}
 
 /// `ArrayDeque` mutable iterator
+#[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 pub struct IterMut<'a, T: 'a> {
     ring: &'a mut [T],
     head: usize,
@@ -1962,6 +1964,7 @@ impl<'a, T> DoubleEndedIterator for IterMut<'a, T> {
 impl<'a, T> ExactSizeIterator for IterMut<'a, T> {}
 
 /// A by-value `ArrayDeque` iterator
+#[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 pub struct IntoIter<A: Array> {
     inner: ArrayDeque<A>,
 }
