@@ -1,4 +1,4 @@
-#`arraydeque`
+# `arraydeque`
 
 [![build status](https://travis-ci.org/goandylok/arraydeque.svg?branch=master)](https://travis-ci.org/goandylok/arraydeque)
 [![codecov](https://codecov.io/gh/goandylok/arraydeque/branch/master/graph/badge.svg)](https://codecov.io/gh/goandylok/arraydeque)
@@ -7,9 +7,9 @@
 
 A circular buffer with fixed capacity.  Requires Rust 1.12+.
 
-This crate is inspired by [**bluss/arrayvec**]
+This crate is inspired by [**bluss/arrayvec**](https://github.com/bluss/arrayvec)
 
-[**bluss/arrayvec**]: https://github.com/bluss/arrayvec
+#### [**Documentation**](file:///C:/Andy/Code/Rust/workspace/arraydeque/target/doc/arraydeque/index.html)
 
 ## Feature Flags
 

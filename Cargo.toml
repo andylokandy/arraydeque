@@ -5,6 +5,7 @@ authors = ["goandylok"]
 license = "MIT/Apache-2.0"
 
 description = "A ring buffer with a fixed capacity, can be stored on the stack."
+documentation = "https://goandylok.github.io/arraydeque/doc/arraydeque/index.html"
 repository = "https://github.com/goandylok/arraydeque"
 
 keywords = ["ring", "circular", "stack", "array", "no_std"]
