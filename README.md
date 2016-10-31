@@ -41,7 +41,7 @@ First, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-arraydeque = "0.1.2"
+arraydeque = "0.1.3"
 ```
 
 Next, add this to your crate root:
@@ -56,7 +56,7 @@ request this via:
 
 ```toml
 [dependencies]
-arraydeque = { version = "0.1.2", default-features = false }
+arraydeque = { version = "0.1.3", default-features = false }
 ```
 
 ## Example
@@ -154,7 +154,7 @@ assert_eq!(vector, vector2);
 generic-array = "0.5.1"
 
 [dependencies.arraydeque]
-version = "0.1.2"
+version = "0.1.3"
 features = ["use_generic_array"]
 ```
 ```rust

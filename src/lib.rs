@@ -39,7 +39,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! arraydeque = "0.1.2"
+//! arraydeque = "0.1.3"
 //! ```
 //!
 //! Next, add this to your crate root:
@@ -54,7 +54,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! arraydeque = { version = "0.1.2", default-features = false }
+//! arraydeque = { version = "0.1.3", default-features = false }
 //! ```
 //!
 //! # Examples
@@ -144,7 +144,7 @@
 //! generic-array = "0.5.1"
 //!
 //! [dependencies.arraydeque]
-//! version = "0.1.2"
+//! version = "0.1.3"
 //! features = ["use_generic_array"]
 //! ```
 //! ```
