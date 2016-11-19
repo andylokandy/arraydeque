@@ -56,6 +56,13 @@
 //! arraydeque = { version = "0.1.3", default-features = false }
 //! ```
 //!
+//! # Capacity
+//!
+//! Note that the `capacity()` is always `backed_array.len() - 1`.
+//! [Read more]
+//!
+//! [Read more]: https://en.wikipedia.org/wiki/Circular_buffer
+//!
 //! # Examples
 //! ```
 //! extern crate arraydeque;
