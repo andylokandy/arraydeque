@@ -196,9 +196,11 @@ extern crate core as std;
 
 mod array;
 mod arraydeque;
+mod rotatingdeque;
 mod utils;
 
 pub use arraydeque::*;
+pub use rotatingdeque::*;
 
 use std::mem;
 
