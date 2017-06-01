@@ -9,7 +9,7 @@ A circular buffer with fixed capacity.  Requires Rust 1.12+.
 
 This crate is inspired by [**bluss/arrayvec**](https://github.com/bluss/arrayvec)
 
-### [**Documentation**](https://goandylok.github.io/arraydeque/doc/arraydeque/index.html)
+### [**Documentation**](https://docs.rs/arraydeque)
 
 ## Feature Flags
 
