@@ -1,5 +1,5 @@
 //! A circular buffer with fixed capacity.
-//! Requires Rust 1.12+
+//! Requires Rust 1.17+
 //!
 //! It can be stored directly on the stack if needed.
 //!
