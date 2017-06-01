@@ -2,27 +2,29 @@ language: rust
 
 sudo: required
 
-rust:
-  - 1.12.0
-  - stable
-  - beta
-  - nightly
+matrix:
+  include:
+    - rust: 1.12.0
+    - rust: stable
+    - rust: beta
+    - rust: nightly
+      env:
+        - NIGHTLY=1
 
 branches:
   only:
     - master
 
 script:
-  - cargo build --verbose
-  - cargo test --verbose
-  - cargo build --verbose --no-default-features
-  - cargo test --verbose --no-default-features
-  - cargo build --verbose --no-default-features --features "use_union"
-  - cargo test --verbose --no-default-features --features "use_union"
-  - cargo build --verbose --no-default-features --features "use_generic_array"
-  - cargo test --verbose --no-default-features --features "use_generic_array"
-  - cargo build --verbose --no-default-features --features "use_union use_generic_array"
-  - cargo test --verbose --no-default-features --features "use_union use_generic_array"
+  - |
+      cargo test --verbose &&
+      cargo test --verbose --no-default-features &&
+      cargo test --verbose --features "use_generic_array" &&
+      cargo test --verbose --no-default-features --features "use_generic_array" &&
+      ([ "$NIGHTLY" != 1 ] || cargo test --verbose --features "use_union") &&
+      ([ "$NIGHTLY" != 1 ] || cargo test --verbose --features "use_union use_generic_array") &&
+      ([ "$NIGHTLY" != 1 ] || cargo test --verbose --no-default-features --features "use_union") &&
+      ([ "$NIGHTLY" != 1 ] || cargo test --verbose --no-default-features --features "use_union use_generic_array")
 
 before_install:
   - sudo apt-get update

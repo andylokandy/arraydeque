@@ -31,7 +31,7 @@ The **arraydeque** crate has the following cargo feature flags:
   - Optional
   - Requires Rust stable channel
   - Depend on generic-array and allow using it just like a fixed
-    size array for ArrayVec storage.    
+    size array for ArrayDeque storage.    
 
 
 ## Usage

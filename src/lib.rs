@@ -29,7 +29,7 @@
 //!   - Optional
 //!   - Requires Rust stable channel
 //!   - Depend on generic-array and allow using it just like a fixed
-//!     size array for ArrayVec storage.
+//!     size array for ArrayDeque storage.
 //!
 //!
 //! # Usage
@@ -183,14 +183,16 @@
 //! # fn main() {}
 //! ```
 
-#![cfg_attr(not(feature="std"), no_std)]
+#![cfg_attr(not(any(feature="std", test)), no_std)]
+
 extern crate odds;
 extern crate nodrop;
 
 #[cfg(feature = "use_generic_array")]
 extern crate generic_array;
 
-#[cfg(not(feature="std"))]
+// #![cfg_attr(not(or(feature="std", test), no_std))]
+#[cfg(not(any(feature="std", test)))]
 extern crate core as std;
 
 use std::mem;
@@ -589,7 +591,7 @@ impl<A: Array> ArrayDeque<A> {
         }
     }
 
-    /// Return the capacity of the `ArrayVec`.
+    /// Return the capacity of the `ArrayDeque`.
     ///
     /// # Capacity
     ///
