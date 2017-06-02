@@ -5,7 +5,7 @@
 [![crates.io](https://img.shields.io/crates/v/arraydeque.svg)](https://crates.io/crates/arraydeque)
 [![docs.rs](https://docs.rs/arraydeque/badge.svg)](https://docs.rs/arraydeque)
 
-A circular buffer with fixed capacity.  Requires Rust 1.17+.
+A circular buffer with fixed capacity.  Requires Rust 1.15+.
 
 This crate is inspired by [**bluss/arrayvec**](https://github.com/bluss/arrayvec)
 

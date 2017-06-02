@@ -1,5 +1,5 @@
 //! A circular buffer with fixed capacity.
-//! Requires Rust 1.17+
+//! Requires Rust 1.15+
 //!
 //! It can be stored directly on the stack if needed.
 //!
@@ -222,7 +222,7 @@ unsafe fn new_array<A: Array>() -> A {
     mem::uninitialized()
 }
 
-/// `ArrayDeque` is a fixed capacity ring buffer.
+/// A fixed capacity ring buffer.
 ///
 /// It can be stored directly on the stack if needed.
 ///
@@ -1972,7 +1972,7 @@ impl<'a, T> DoubleEndedIterator for IterMut<'a, T> {
 
 impl<'a, T> ExactSizeIterator for IterMut<'a, T> {}
 
-/// A by-value `ArrayDeque` iterator
+/// By-value `ArrayDeque` iterator
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 pub struct IntoIter<A: Array> {
     inner: ArrayDeque<A>,
@@ -2002,7 +2002,7 @@ impl<A: Array> DoubleEndedIterator for IntoIter<A> {
 
 impl<A: Array> ExactSizeIterator for IntoIter<A> {}
 
-/// A draining `ArrayDeque` iterator
+/// Draining `ArrayDeque` iterator
 pub struct Drain<'a, A>
     where A: Array,
           A::Item: 'a
