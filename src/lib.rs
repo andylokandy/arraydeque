@@ -209,9 +209,9 @@ use std::ops::IndexMut;
 pub use odds::IndexRange as RangeArgument;
 use nodrop::NoDrop;
 
-mod array;
+pub mod array;
 
-use array::Array;
+pub use array::Array;
 use array::Index as ArrayIndex;
 
 unsafe fn new_array<A: Array>() -> A {
