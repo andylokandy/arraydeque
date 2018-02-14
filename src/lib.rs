@@ -146,6 +146,8 @@
 
 #![cfg_attr(not(any(feature="std", test)), no_std)]
 
+#![deny(missing_docs)]
+
 extern crate odds;
 // #![cfg_attr(not(or(feature="std", test), no_std))]
 #[cfg(not(any(feature="std", test)))]
