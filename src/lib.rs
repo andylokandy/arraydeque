@@ -1605,16 +1605,10 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 }
 
 impl<A: Array> ArrayDeque<A, Saturating> {
-    /// Creates a deque from the elements in the iterator.
-    ///
-    /// Does not extract more items than there is space for.
-    pub fn from<T: IntoIterator<Item = A::Item>>(iter: T) -> Self {
-        let mut deque: ArrayDeque<A, Saturating> = ArrayDeque::new();
-        let take = deque.capacity();
-        for element in iter.into_iter().take(take) {
-            deque.push_back(element);
-        }
-        deque
+    /// Converts `self` into a `ArrayDeque<A, Saturating>`
+    pub fn wrapping(mut self) -> ArrayDeque<A, Wrapping> {
+        use std::iter::FromIterator;
+        ArrayDeque::<A, Wrapping>::from_iter(self.drain(..))
     }
 
     /// Adds an element to the front of the deque.
@@ -1828,15 +1822,10 @@ impl<A: Array> ArrayDeque<A, Saturating> {
 }
 
 impl<A: Array> ArrayDeque<A, Wrapping> {
-    /// Creates a deque from the elements in the iterator.
-    ///
-    /// Extracts all items from `other` overwriting the deque if necessary.
-    pub fn from<T: IntoIterator<Item = A::Item>>(iter: T) -> Self {
-        let mut deque: ArrayDeque<A, Wrapping> = ArrayDeque::new();
-        for element in iter.into_iter() {
-            deque.push_back(element);
-        }
-        deque
+    /// Converts `self` into a `ArrayDeque<A, Wrapping>`
+    pub fn saturating(mut self) -> ArrayDeque<A, Saturating> {
+        use std::iter::FromIterator;
+        ArrayDeque::<A, Saturating>::from_iter(self.drain(..))
     }
 
     /// Adds an element to the front of the deque.
@@ -2482,27 +2471,44 @@ impl<'a, A, B> ExactSizeIterator for Drain<'a, A, B>
 mod tests {
     use super::*;
     use std::vec::Vec;
+    use std::iter::FromIterator;
 
     #[test]
-    fn wrapping_from() {
+    fn wrapping_from_iter() {
         type Deque = ArrayDeque<[usize; 5], Wrapping>;
 
         // within capacity:
-        assert_eq!(Deque::from(vec![1, 2, 3]), vec![1, 2, 3]);
+        assert_eq!(Deque::from_iter(vec![1, 2, 3]), vec![1, 2, 3]);
 
         // beyond capacity:
-        assert_eq!(Deque::from(vec![1, 2, 3, 4, 5]), vec![2, 3, 4, 5]);
+        assert_eq!(Deque::from_iter(vec![1, 2, 3, 4, 5]), vec![2, 3, 4, 5]);
     }
 
     #[test]
-    fn saturating_from() {
+    fn saturating_from_iter() {
         type Deque = ArrayDeque<[usize; 5], Saturating>;
 
         // within capacity:
-        assert_eq!(Deque::from(vec![1, 2, 3]), vec![1, 2, 3]);
+        assert_eq!(Deque::from_iter(vec![1, 2, 3]), vec![1, 2, 3]);
 
         // beyond capacity:
-        assert_eq!(Deque::from(vec![1, 2, 3, 4, 5]), vec![1, 2, 3, 4]);
+        assert_eq!(Deque::from_iter(vec![1, 2, 3, 4, 5]), vec![1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn saturating_wrapping() {
+        type SaturatingDeque = ArrayDeque<[usize; 6], Saturating>;
+
+        let saturating = SaturatingDeque::from_iter(vec![1, 2, 3]);
+        assert_eq!(saturating.wrapping(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn wrapping_saturating() {
+        type WrappingDeque = ArrayDeque<[usize; 6], Wrapping>;
+
+        let wrapping = WrappingDeque::from_iter(vec![1, 2, 3]);
+        assert_eq!(wrapping.saturating(), vec![1, 2, 3]);
     }
 
     #[test]
@@ -2955,7 +2961,7 @@ mod tests {
     fn saturating_from_iterator() {
         let tester: ArrayDeque<[_; 5], Saturating>;
         let mut expected = ArrayDeque::<[_; 5], Saturating>::new();
-        tester = vec![0, 1, 2, 3, 4, 5].into_iter().collect();
+        tester = ArrayDeque::from_iter(vec![0, 1, 2, 3, 4, 5]);
         expected.extend(0..4);
         assert_eq!(tester, expected);
     }
