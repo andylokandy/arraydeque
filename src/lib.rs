@@ -2037,21 +2037,21 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     /// ```
     ///
     /// ```
-    /// // use arraydeque::{ArrayDeque, Wrapping};
-    /// //
-    /// // let mut deque: ArrayDeque<[_; 8], Wrapping> = vec![9, 8, 7].into_iter().collect();
-    /// // let mut vec1 = vec![6, 5, 4];
-    /// // let mut vec2 = vec![3, 2, 1];
-    /// //
-    /// // deque.extend_back(vec1);
-    /// // assert_eq!(deque.len(), 6);
-    /// //
-    /// // // max capacity reached
-    /// // deque.extend_back(vec2);
-    /// // assert_eq!(deque.len(), 7);
-    /// // let collected: Vec<_> = deque.into_iter().collect();
-    /// // let expected = vec![7, 6, 5, 4, 3, 2, 1];
-    /// // assert_eq!(collected, expected);
+    /// use arraydeque::{ArrayDeque, Wrapping};
+    ///
+    /// let mut deque: ArrayDeque<[_; 8], Wrapping> = vec![9, 8, 7].into_iter().collect();
+    /// let mut vec1 = vec![6, 5, 4];
+    /// let mut vec2 = vec![3, 2, 1];
+    ///
+    /// deque.extend_back(vec1);
+    /// assert_eq!(deque.len(), 6);
+    ///
+    /// // max capacity reached
+    /// deque.extend_back(vec2);
+    /// assert_eq!(deque.len(), 7);
+    /// let collected: Vec<_> = deque.into_iter().collect();
+    /// let expected = vec![7, 6, 5, 4, 3, 2, 1];
+    /// assert_eq!(collected, expected);
     /// ```
     pub fn extend_back<T: IntoIterator<Item = A::Item>>(&mut self, iter: T) {
         for element in iter.into_iter() {
