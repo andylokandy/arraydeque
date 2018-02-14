@@ -1618,6 +1618,13 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     ///
     /// # Examples
     ///
+    /// ```text
+    /// 1 -(+)-> [_, _, _] => [1, _, _] -> None
+    /// 2 -(+)-> [1, _, _] => [2, 1, _] -> None
+    /// 3 -(+)-> [2, 1, _] => [3, 2, 1] -> None
+    /// 4 -(+)-> [3, 2, 1] => [3, 2, 1] -> Some(4)
+    /// ```
+    ///
     /// ```
     /// use arraydeque::{ArrayDeque, Saturating};
     ///
@@ -1644,6 +1651,13 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// if the vector is full.
     ///
     /// # Examples
+    ///
+    /// ```text
+    /// [_, _, _] <-(+)- 1 => [_, _, 1] -> None
+    /// [_, _, 1] <-(+)- 2 => [_, 1, 2] -> None
+    /// [_, 1, 2] <-(+)- 3 => [1, 2, 3] -> None
+    /// [1, 2, 3] <-(+)- 4 => [1, 2, 3] -> Some(4)
+    /// ```
     ///
     /// ```
     /// use arraydeque::{ArrayDeque, Saturating};
@@ -1679,6 +1693,14 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// Panics if `index` is greater than `ArrayDeque`'s length
     ///
     /// # Examples
+    ///
+    ///
+    /// ```text
+    /// [0, _, _] <-(+)- 1 @ 0 => [1, 0, _] -> None
+    /// [1, 0, _] <-(+)- 3 @ 1 => [1, 3, 0] -> None
+    /// [1, 3, 0] <-(+)- 2 @ 1 => [1, 3, 0] -> Some(2)
+    /// ```
+    ///
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
@@ -1705,6 +1727,13 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// Does not extract more items than there is space for.
     ///
     /// # Examples
+    ///
+    /// ```text
+    /// [2, 1] -(+)-> [_, _, _] => [1, 2, _]
+    /// [2, 1] -(+)-> [3, _, _] => [1, 2, 3]
+    /// [2, 1] -(+)-> [3, 4, _] => [2, 3, 4]
+    /// [2, 1] -(+)-> [3, 4, 5] => [3, 4, 5]
+    /// ```
     ///
     /// ```
     /// use arraydeque::{ArrayDeque, Saturating};
@@ -1735,6 +1764,13 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// Does not extract more items than there is space for.
     ///
     /// # Examples
+    ///
+    /// ```text
+    /// [_, _, _] <-(+)- [2, 1] => [_, 2, 1]
+    /// [_, _, 3] <-(+)- [2, 1] => [3, 2, 1]
+    /// [_, 4, 3] <-(+)- [2, 1] => [4, 3, 2]
+    /// [5, 4, 3] <-(+)- [2, 1] => [5, 4, 3]
+    /// ```
     ///
     /// ```
     /// use arraydeque::{ArrayDeque, Saturating};
@@ -1767,6 +1803,13 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     ///
     /// # Examples
     ///
+    /// ```text
+    /// [1, 2] -(+)-> [_, _, _] => [1, 2, _]
+    /// [1, 2] -(+)-> [3, _, _] => [1, 2, 3]
+    /// [1, 2] -(+)-> [3, 4, _] => [2, 3, 4]
+    /// [1, 2] -(+)-> [3, 4, 5] => [3, 4, 5]
+    /// ```
+    ///
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
@@ -1797,6 +1840,11 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     ///
     /// # Examples
     ///
+    /// ```text
+    /// [_, _, _] <-(+)- [2, 1] => [_, 2, 1]
+    /// [_, _, 3] <-(+)- [2, 1] => [3, 2, 1]
+    /// [_, 4, 3] <-(+)- [2, 1] => [4, 3, 2]
+    /// [5, 4, 3] <-(+)- [2, 1] => [5, 4, 3]
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
@@ -1835,6 +1883,11 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     ///
     /// # Examples
     ///
+    /// ```text
+    /// 1 -(+)-> [_, _, _] => [1, _, _] -> None
+    /// 2 -(+)-> [1, _, _] => [2, 1, _] -> None
+    /// 3 -(+)-> [2, 1, _] => [3, 2, 1] -> None
+    /// 4 -(+)-> [3, 2, 1] => [4, 3, 2] -> Some(1)
     /// ```
     /// use arraydeque::{ArrayDeque, Wrapping};
     ///
@@ -1862,6 +1915,13 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     /// if the vector is full, where `existing` is the element being overwritten.
     ///
     /// # Examples
+    ///
+    /// ```text
+    /// [_, _, _] <-(+)- 1 => [_, _, 1] -> None
+    /// [_, _, 1] <-(+)- 2 => [_, 1, 2] -> None
+    /// [_, 1, 2] <-(+)- 3 => [1, 2, 3] -> None
+    /// [1, 2, 3] <-(+)- 4 => [2, 3, 4] -> Some(1)
+    /// ```
     ///
     /// ```
     /// use arraydeque::{ArrayDeque, Wrapping};
@@ -1898,6 +1958,13 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     /// Panics if `index` is greater than `ArrayDeque`'s length
     ///
     /// # Examples
+    ///
+    /// ```text
+    /// [0, _, _] <-(+)- 1 @ 0 => [1, 0, _] -> None
+    /// [1, 0, _] <-(+)- 3 @ 1 => [1, 3, 0] -> None
+    /// [1, 3, 0] <-(+)- 2 @ 1 => [1, 2, 3] -> Some(0)
+    /// ```
+    ///
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
@@ -1925,6 +1992,13 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     /// Extracts all items from `other` overwriting `self` if necessary.
     ///
     /// # Examples
+    ///
+    /// ```text
+    /// [2, 1] -(+)-> [_, _, _] => [1, 2, _]
+    /// [2, 1] -(+)-> [3, _, _] => [1, 2, 3]
+    /// [2, 1] -(+)-> [3, 4, _] => [1, 2, 3]
+    /// [2, 1] -(+)-> [3, 4, 5] => [1, 2, 3]
+    /// ```
     ///
     /// ```
     /// use arraydeque::{ArrayDeque, Wrapping};
@@ -1955,6 +2029,13 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     /// 
     /// # Examples
     /// 
+    /// ```text
+    /// [_, _, _] <-(+)- [2, 1] => [_, 2, 1]
+    /// [_, _, 3] <-(+)- [2, 1] => [3, 2, 1]
+    /// [_, 4, 3] <-(+)- [2, 1] => [3, 2, 1]
+    /// [5, 4, 3] <-(+)- [2, 1] => [3, 2, 1]
+    /// ```
+    ///
     /// ```
     /// // use arraydeque::{ArrayDeque, Wrapping};
     /// //
@@ -1984,6 +2065,13 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     ///
     /// # Examples
     ///
+    /// ```text
+    /// [1, 2] -(+)-> [_, _, _] => [1, 2, _]
+    /// [1, 2] -(+)-> [3, _, _] => [1, 2, 3]
+    /// [1, 2] -(+)-> [3, 4, _] => [1, 2, 3]
+    /// [1, 2] -(+)-> [3, 4, 5] => [1, 2, 3]
+    /// ```
+    ///
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
@@ -2011,6 +2099,13 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     /// Extracts all items from `other` overwriting `self` if necessary.
     ///
     /// # Examples
+    ///
+    /// ```text
+    /// [_, _, _] <-(+)- [2, 1] => [_, 2, 1]
+    /// [_, _, 3] <-(+)- [2, 1] => [3, 2, 1]
+    /// [_, 4, 3] <-(+)- [2, 1] => [3, 2, 1]
+    /// [5, 4, 3] <-(+)- [2, 1] => [3, 2, 1]
+    /// ```
     ///
     /// ```
     /// use arraydeque::ArrayDeque;
