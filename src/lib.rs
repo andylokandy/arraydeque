@@ -169,6 +169,7 @@ use std::marker::PhantomData;
 pub use odds::IndexRange as RangeArgument;
 
 mod array;
+mod behavior;
 pub mod error;
 
 pub use array::Array;
@@ -185,62 +186,11 @@ pub trait Behavior {}
 /// Pushing elements to the **back** of a fixed-size deque that **has already reached its capacity**
 /// causes it to **overwrite** existing elements from the **front**.
 ///
-/// # Examples
-///
-/// ```text
-/// [_, _, _] + 1 => [_, _, 1] -> None
-/// [_, _, 1] + 2 => [_, 1, 2] -> None
-/// [_, 1, 2] + 3 => [1, 2, 3] -> None
-/// [1, 2, 3] + 4 => [2, 3, 4] -> Some(1)
-/// ```
-///
 /// ### Pushing to front:
 ///
 /// Pushing elements to the **front** of a fixed-size deque that **has already reached its capacity**
 /// causes it to **overwrite** existing elements from the **back**.
-///
-/// # Examples
-///
-/// ```text
-/// 1 + [_, _, _] => [1, _, _] -> None
-/// 2 + [1, _, _] => [2, 1, _] -> None
-/// 3 + [2, 1, _] => [3, 2, 1] -> None
-/// 4 + [3, 2, 1] => [4, 3, 2] -> Some(1)
-/// ```
-pub struct Wrapping;
-impl Behavior for Wrapping {}
-
-/// Behavior for `ArrayDeque` that specifies saturating write semantics.
-///
-/// ### Pushing to back:
-///
-/// Pushing elements to the **back** of a fixed-size deque that **has already reached its capacity**
-/// causes it **exit early, without performing any mutation**.
-///
-/// # Examples
-///
-/// ```text
-/// [_, _, _] + 1 => [_, _, 1] -> None
-/// [_, _, 1] + 2 => [_, 1, 2] -> None
-/// [_, 1, 2] + 3 => [1, 2, 3] -> None
-/// [1, 2, 3] + 4 => [1, 2, 3] -> Some(4)
-/// ```
-///
-/// ### Pushing to front:
-///
-/// Pushing elements to the **front** of a fixed-size deque that **has already reached its capacity**
-/// causes it **exit early, without performing any mutation**.
-///
-/// # Examples
-///
-/// ```text
-/// 1 + [_, _, _] => [1, _, _] -> None
-/// 2 + [1, _, _] => [2, 1, _] -> None
-/// 3 + [2, 1, _] => [3, 2, 1] -> None
-/// 4 + [3, 2, 1] => [3, 2, 1] -> Some(4)
-/// ```
-pub struct Saturating;
-impl Behavior for Saturating {}
+pub use behavior::{Behavior, Saturating, Wrapping};
 
 unsafe fn new_array<A: Array>() -> A {
     // Note: Returning an uninitialized value here only works
@@ -519,7 +469,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let vector: ArrayDeque<[usize; 2]> = ArrayDeque::new();
+    /// let vector: ArrayDeque<[usize; 3]> = ArrayDeque::new();
     /// ```
     #[inline]
     pub fn new() -> Self {
@@ -543,7 +493,6 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// use arraydeque::ArrayDeque;
     ///
     /// let mut deque: ArrayDeque<[_; 4]> = ArrayDeque::new();
-    ///
     /// deque.push_back(3);
     /// deque.push_back(4);
     /// deque.push_back(5);
@@ -633,7 +582,6 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     /// let mut deque: ArrayDeque<[usize; 4]> = ArrayDeque::new();
-    ///
     /// assert_eq!(deque.capacity(), 3);
     /// ```
     ///
@@ -923,7 +871,6 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// let mut deque: ArrayDeque<[_; 3]> = ArrayDeque::new();
     /// assert_eq!(deque.front(), None);
     /// deque.push_back(1);
-    ///
     /// deque.push_back(2);
     /// assert_eq!(deque.front(), Some(&1));
     /// ```
