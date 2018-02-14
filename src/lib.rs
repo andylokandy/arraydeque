@@ -147,15 +147,15 @@
 #![cfg_attr(not(any(feature="std", test)), no_std)]
 
 extern crate odds;
-// #![cfg_attr(not(or(feature="std", test), no_std))]
 #[cfg(not(any(feature="std", test)))]
 extern crate core as std;
 
 use std::mem;
+use std::mem::ManuallyDrop;
 use std::cmp;
 use std::cmp::Ordering;
-use std::mem::ManuallyDrop;
 use std::hash::{Hash, Hasher};
+use std::marker;
 use std::fmt;
 use std::ptr;
 use std::slice;
@@ -166,9 +166,11 @@ use std::ops::IndexMut;
 pub use odds::IndexRange as RangeArgument;
 
 mod array;
+mod wrap;
 pub mod error;
 
 pub use array::Array;
+pub use wrap::{NoneWrapping, Wrapping};
 pub use error::CapacityError;
 use array::Index as ArrayIndex;
 
@@ -187,34 +189,337 @@ use array::Index as ArrayIndex;
 /// [Read more]
 ///
 /// [Read more]: https://en.wikipedia.org/wiki/Circular_buffer
-pub struct ArrayDeque<A: Array> {
+pub struct ArrayDeque<A: Array, W = NoneWrapping> {
     xs: ManuallyDrop<A>,
     head: A::Index,
     tail: A::Index,
+    marker: marker::PhantomData<W>
 }
 
-impl<A: Array> Clone for ArrayDeque<A>
+impl<A: Array> ArrayDeque<A, NoneWrapping> {
+    /// Inserts an element first in the sequence.
+    ///
+    /// Return `None` if the push succeeds, or and return `Some(` *element* `)`
+    /// if the vector is full.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    /// use arraydeque::CapacityError;
+    ///
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
+    ///
+    /// buf.push_front(0);
+    /// buf.push_front(1);
+    ///
+    /// let overflow = buf.push_front(2);
+    ///
+    /// assert_eq!(buf.back(), Some(&0));
+    /// assert_eq!(overflow, Err(CapacityError { element: 2 }));
+    /// ```
+    pub fn push_front(&mut self, element: A::Item) -> Result<(), CapacityError<A::Item>> {
+        if !self.is_full() {
+            unsafe { self.push_front_unchecked(element); }
+            Ok(())
+        } else {
+            Err(CapacityError { element })
+        }
+    }
+
+    /// Appends an element to the back of a buffer
+    ///
+    /// Return `None` if the push succeeds, or and return `Some(` *element* `)`
+    /// if the vector is full.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    /// use arraydeque::CapacityError;
+    ///
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
+    ///
+    /// buf.push_back(0);
+    /// buf.push_back(1);
+    ///
+    /// let overflow = buf.push_back(2);
+    ///
+    /// assert_eq!(buf.back(), Some(&1));
+    /// assert_eq!(overflow, Err(CapacityError { element: 2 }));
+    /// ```
+    pub fn push_back(&mut self, element: A::Item) -> Result<(), CapacityError<A::Item>> {
+        if !self.is_full() {
+            unsafe { self.push_back_unchecked(element); }
+            Ok(())
+        } else {
+            Err(CapacityError { element })
+        }
+    }
+
+    /// Inserts an element at `index` within the `ArrayDeque`. Whichever
+    /// end is closer to the insertion point will be moved to make room,
+    /// and all the affected elements will be moved to new positions.
+    ///
+    /// Return `None` if the push succeeds, or and return `Some(` *element* `)`
+    /// if the vector is full.
+    ///
+    /// Element at index 0 is the front of the queue.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` is greater than `ArrayDeque`'s length
+    ///
+    /// # Examples
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    /// use arraydeque::CapacityError;
+    ///
+    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    ///
+    /// buf.push_back(0);
+    /// buf.push_back(1);
+    ///
+    /// buf.insert(0, 2);
+    ///
+    /// let overflow = buf.insert(1, 3);
+    ///
+    /// assert_eq!(buf[0], 2);
+    /// assert_eq!(overflow, Err(CapacityError { element: 3 }));
+    /// ```
+    pub fn insert(&mut self, index: usize, element: A::Item) -> Result<(), CapacityError<A::Item>> {
+        assert!(index <= self.len(), "index out of bounds");
+
+        if self.is_full() {
+            return Err(CapacityError{ element });
+        }
+
+        unsafe { self.insert_unchecked(index, element); }
+        
+        Ok(())
+    }
+
+    /// Moves all the elements of `other` into `Self`, leaving `other` empty.
+    ///
+    /// Does not extract more items than there is space for. No error
+    /// occurs if there are more iterator elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// let mut buf: ArrayDeque<[_; 8]> = ArrayDeque::new();
+    /// let mut other: ArrayDeque<[_; 8]> = ArrayDeque::new();
+    ///
+    /// buf.extend(vec![0, 1]);
+    /// other.extend(vec![2, 3]);
+    /// 
+    /// buf.append(&mut other);
+    /// 
+    /// let expected = vec![0, 1, 2, 3];
+    /// 
+    /// assert!(buf.into_iter().eq(expected.into_iter()));
+    /// assert!(other.is_empty());
+    /// ```
+    pub fn append(&mut self, other: &mut Self) {
+        self.extend(other.drain(..));
+    }
+}
+
+#[allow(unused_must_use)]
+impl<A: Array> Extend<A::Item> for ArrayDeque<A, NoneWrapping> {
+    fn extend<T: IntoIterator<Item = A::Item>>(&mut self, iter: T) {
+        let take = self.capacity() - self.len();
+        for elt in iter.into_iter().take(take) {            
+            self.push_back(elt);
+        }
+    }
+}
+
+impl<A: Array> iter::FromIterator<A::Item> for ArrayDeque<A, NoneWrapping> {
+    fn from_iter<T: IntoIterator<Item = A::Item>>(iter: T) -> Self {
+        let mut array = ArrayDeque::new();
+        array.extend(iter);
+        array
+    }
+}
+
+impl<A: Array> Clone for ArrayDeque<A, NoneWrapping>
     where A::Item: Clone
 {
-    fn clone(&self) -> ArrayDeque<A> {
+    fn clone(&self) -> ArrayDeque<A, NoneWrapping> {
         self.iter().cloned().collect()
     }
 }
 
-impl<A: Array> Drop for ArrayDeque<A> {
-    fn drop(&mut self) {
-        self.clear();
+impl<A: Array> ArrayDeque<A, Wrapping> {
+    /// Inserts an element first in the sequence.
+    ///
+    /// Return `None` if the push succeeds, or and return `Some(` *element* `)`
+    /// if the vector is full.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    /// use arraydeque::CapacityError;
+    ///
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
+    ///
+    /// buf.push_front(0);
+    /// buf.push_front(1);
+    ///
+    /// let overflow = buf.push_front(2);
+    ///
+    /// assert_eq!(buf.back(), Some(&0));
+    /// assert_eq!(overflow, Err(CapacityError { element: 2 }));
+    /// ```
+    pub fn push_front(&mut self, element: A::Item) {
+        if self.is_full() {
+            self.pop_back();
+        } 
+
+        unsafe { self.push_front_unchecked(element); }        
+    }
+
+    /// Appends an element to the back of a buffer
+    ///
+    /// Return `None` if the push succeeds, or and return `Some(` *element* `)`
+    /// if the vector is full.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    /// use arraydeque::CapacityError;
+    ///
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
+    ///
+    /// buf.push_back(0);
+    /// buf.push_back(1);
+    ///
+    /// let overflow = buf.push_back(2);
+    ///
+    /// assert_eq!(buf.back(), Some(&1));
+    /// assert_eq!(overflow, Err(CapacityError { element: 2 }));
+    /// ```
+    pub fn push_back(&mut self, element: A::Item) {
+        if self.is_full() {
+            self.pop_front();
+        } 
+
+        unsafe { self.push_back_unchecked(element); }   
+    }
+
+    /// Inserts an element at `index` within the `ArrayDeque`. Whichever
+    /// end is closer to the insertion point will be moved to make room,
+    /// and all the affected elements will be moved to new positions.
+    ///
+    /// Return `None` if the push succeeds, or and return `Some(` *element* `)`
+    /// if the vector is full.
+    ///
+    /// Element at index 0 is the front of the queue.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` is greater than `ArrayDeque`'s length
+    ///
+    /// # Examples
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    /// use arraydeque::CapacityError;
+    ///
+    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    ///
+    /// buf.push_back(0);
+    /// buf.push_back(1);
+    ///
+    /// buf.insert(0, 2);
+    ///
+    /// let overflow = buf.insert(1, 3);
+    ///
+    /// assert_eq!(buf[0], 2);
+    /// assert_eq!(overflow, Err(CapacityError { element: 3 }));
+    /// ```
+    pub fn insert(&mut self, index: usize, element: A::Item) {
+        assert!(index <= self.len(), "index out of bounds");
+
+        if self.is_full() {
+            self.pop_front();
+        }
+
+        unsafe { self.insert_unchecked(index, element); }
+    }
+
+    /// Moves all the elements of `other` into `Self`, leaving `other` empty.
+    ///
+    /// Does not extract more items than there is space for. No error
+    /// occurs if there are more iterator elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// let mut buf: ArrayDeque<[_; 8]> = ArrayDeque::new();
+    /// let mut other: ArrayDeque<[_; 8]> = ArrayDeque::new();
+    ///
+    /// buf.extend(vec![0, 1]);
+    /// other.extend(vec![2, 3]);
+    /// 
+    /// buf.append(&mut other);
+    /// 
+    /// let expected = vec![0, 1, 2, 3];
+    /// 
+    /// assert!(buf.into_iter().eq(expected.into_iter()));
+    /// assert!(other.is_empty());
+    /// ```
+    pub fn append(&mut self, other: &mut Self) {
+        self.extend(other.drain(..));
     }
 }
 
-impl<A: Array> Default for ArrayDeque<A> {
-    #[inline]
-    fn default() -> ArrayDeque<A> {
-        ArrayDeque::new()
+#[allow(unused_must_use)]
+impl<A: Array> Extend<A::Item> for ArrayDeque<A, Wrapping> {
+    fn extend<T: IntoIterator<Item = A::Item>>(&mut self, iter: T) {
+        let take = self.capacity() - self.len();
+        for elt in iter.into_iter().take(take) {            
+            self.push_back(elt);
+        }
     }
 }
 
-impl<A: Array> ArrayDeque<A> {
+impl<A: Array> iter::FromIterator<A::Item> for ArrayDeque<A, Wrapping> {
+    fn from_iter<T: IntoIterator<Item = A::Item>>(iter: T) -> Self {
+        let mut array = ArrayDeque::new();
+        array.extend(iter);
+        array
+    }
+}
+
+impl<A: Array> Clone for ArrayDeque<A, Wrapping>
+    where A::Item: Clone
+{
+    fn clone(&self) -> ArrayDeque<A, Wrapping> {
+        self.iter().cloned().collect()
+    }
+}
+
+impl<A: Array> From<ArrayDeque<A, Wrapping>> for ArrayDeque<A, NoneWrapping> {
+    fn from(buf: ArrayDeque<A, Wrapping>) -> Self {
+        buf.into_iter().collect()
+    }
+}
+
+impl<A: Array> From<ArrayDeque<A, NoneWrapping>> for ArrayDeque<A, Wrapping> {
+    fn from(buf: ArrayDeque<A, NoneWrapping>) -> Self {
+        buf.into_iter().collect()
+    }
+}
+
+// primitive private methods
+impl<A: Array, W> ArrayDeque<A, W> {
     #[inline]
     fn wrap_add(index: usize, addend: usize) -> usize {
         wrap_add(index, addend, A::capacity())
@@ -260,6 +565,226 @@ impl<A: Array> ArrayDeque<A> {
     unsafe fn set_tail(&mut self, tail: usize) {
         debug_assert!(tail <= self.capacity());
         self.tail = ArrayIndex::from(tail);
+    }
+
+    #[inline]
+    unsafe fn push_front_unchecked(&mut self, element: A::Item) {
+        let new_tail = Self::wrap_sub(self.tail(), 1);
+        self.set_tail(new_tail);
+        self.buffer_write(new_tail, element);
+    }
+
+    #[inline]
+    unsafe fn push_back_unchecked(&mut self, element: A::Item) {
+        let head = self.head();
+        self.set_head(Self::wrap_add(head, 1));
+        self.buffer_write(head, element);
+    }
+    
+    #[allow(unused_unsafe)]
+    #[inline]
+    unsafe fn insert_unchecked(&mut self, index: usize, element: A::Item) {
+        // Move the least number of elements in the ring buffer and insert
+        // the given object
+        //
+        // At most len/2 - 1 elements will be moved. O(min(n, n-i))
+        //
+        // There are three main cases:
+        //  Elements are contiguous
+        //      - special case when tail is 0
+        //  Elements are discontiguous and the insert is in the tail section
+        //  Elements are discontiguous and the insert is in the head section
+        //
+        // For each of those there are two more cases:
+        //  Insert is closer to tail
+        //  Insert is closer to head
+        //
+        // Key: H - self.head
+        //      T - self.tail
+        //      o - Valid element
+        //      I - Insertion element
+        //      A - The element that should be after the insertion point
+        //      M - Indicates element was moved
+
+        let idx = Self::wrap_add(self.tail(), index);
+
+        let distance_to_tail = index;
+        let distance_to_head = self.len() - index;
+
+        let contiguous = self.is_contiguous();
+
+        match (contiguous, distance_to_tail <= distance_to_head, idx >= self.tail()) {
+            (true, true, _) if index == 0 => {
+                // push_front
+                //
+                //       T
+                //       I             H
+                //      [A o o o o o o . . . . . . . . .]
+                //
+                //                       H         T
+                //      [A o o o o o o o . . . . . I]
+                //
+
+                let new_tail = Self::wrap_sub(self.tail(), 1);
+                unsafe { self.set_tail(new_tail) }
+            }
+            (true, true, _) => {
+                unsafe {
+                    // contiguous, insert closer to tail:
+                    //
+                    //             T   I         H
+                    //      [. . . o o A o o o o . . . . . .]
+                    //
+                    //           T               H
+                    //      [. . o o I A o o o o . . . . . .]
+                    //           M M
+                    //
+                    // contiguous, insert closer to tail and tail is 0:
+                    //
+                    //
+                    //       T   I         H
+                    //      [o o A o o o o . . . . . . . . .]
+                    //
+                    //                       H             T
+                    //      [o I A o o o o o . . . . . . . o]
+                    //       M                             M
+
+                    let tail = self.tail();
+                    let new_tail = Self::wrap_sub(self.tail(), 1);
+
+                    self.copy(new_tail, tail, 1);
+                    // Already moved the tail, so we only copy `index - 1` elements.
+                    self.copy(tail, tail + 1, index - 1);
+
+                    self.set_tail(new_tail);
+                }
+            }
+            (true, false, _) => {
+                unsafe {
+                    //  contiguous, insert closer to head:
+                    //
+                    //             T       I     H
+                    //      [. . . o o o o A o o . . . . . .]
+                    //
+                    //             T               H
+                    //      [. . . o o o o I A o o . . . . .]
+                    //                       M M M
+
+                    let head = self.head();
+                    self.copy(idx + 1, idx, head - idx);
+                    let new_head = Self::wrap_add(self.head(), 1);
+                    self.set_head(new_head);
+                }
+            }
+            (false, true, true) => {
+                unsafe {
+                    // discontiguous, insert closer to tail, tail section:
+                    //
+                    //                   H         T   I
+                    //      [o o o o o o . . . . . o o A o o]
+                    //
+                    //                   H       T
+                    //      [o o o o o o . . . . o o I A o o]
+                    //                           M M
+
+                    let tail = self.tail();
+                    self.copy(tail - 1, tail, index);
+                    self.set_tail(tail - 1);
+                }
+            }
+            (false, false, true) => {
+                unsafe {
+                    // discontiguous, insert closer to head, tail section:
+                    //
+                    //           H             T         I
+                    //      [o o . . . . . . . o o o o o A o]
+                    //
+                    //             H           T
+                    //      [o o o . . . . . . o o o o o I A]
+                    //       M M M                         M
+
+                    // copy elements up to new head
+                    let head = self.head();
+                    self.copy(1, 0, head);
+
+                    // copy last element into empty spot at bottom of buffer
+                    self.copy(0, A::capacity() - 1, 1);
+
+                    // move elements from idx to end forward not including ^ element
+                    self.copy(idx + 1, idx, A::capacity() - 1 - idx);
+
+                    self.set_head(head + 1);
+                }
+            }
+            (false, true, false) if idx == 0 => {
+                unsafe {
+                    // discontiguous, insert is closer to tail, head section,
+                    // and is at index zero in the internal buffer:
+                    //
+                    //       I                   H     T
+                    //      [A o o o o o o o o o . . . o o o]
+                    //
+                    //                           H   T
+                    //      [A o o o o o o o o o . . o o o I]
+                    //                               M M M
+
+                    // copy elements up to new tail
+                    let tail = self.tail();
+                    self.copy(tail - 1, tail, A::capacity() - tail);
+
+                    // copy last element into empty spot at bottom of buffer
+                    self.copy(A::capacity() - 1, 0, 1);
+
+                    self.set_tail(tail - 1);
+                }
+            }
+            (false, true, false) => {
+                unsafe {
+                    // discontiguous, insert closer to tail, head section:
+                    //
+                    //             I             H     T
+                    //      [o o o A o o o o o o . . . o o o]
+                    //
+                    //                           H   T
+                    //      [o o I A o o o o o o . . o o o o]
+                    //       M M                     M M M M
+
+                    let tail = self.tail();
+                    // copy elements up to new tail
+                    self.copy(tail - 1, tail, A::capacity() - tail);
+
+                    // copy last element into empty spot at bottom of buffer
+                    self.copy(A::capacity() - 1, 0, 1);
+
+                    // move elements from idx-1 to end forward not including ^ element
+                    self.copy(0, 1, idx - 1);
+
+                    self.set_tail(tail - 1);
+                }
+            }
+            (false, false, false) => {
+                unsafe {
+                    // discontiguous, insert closer to head, head section:
+                    //
+                    //               I     H           T
+                    //      [o o o o A o o . . . . . . o o o]
+                    //
+                    //                     H           T
+                    //      [o o o o I A o o . . . . . o o o]
+                    //                 M M M
+
+                    let head = self.head();
+                    self.copy(idx + 1, idx, head - idx);
+                    self.set_head(head + 1);
+                }
+            }
+        }
+
+        // tail might've been changed so we need to recalculate
+        let new_idx = Self::wrap_add(self.tail(), index);
+        unsafe {
+            self.buffer_write(new_idx, element);
+        }
     }
 
     /// Copies a contiguous block of memory len long from src to dst
@@ -424,7 +949,7 @@ impl<A: Array> ArrayDeque<A> {
     }
 }
 
-impl<A: Array> ArrayDeque<A> {
+impl<A: Array, W> ArrayDeque<A, W> {
     /// Creates an empty `ArrayDeque`.
     ///
     /// # Examples
@@ -435,12 +960,13 @@ impl<A: Array> ArrayDeque<A> {
     /// let vector: ArrayDeque<[usize; 2]> = ArrayDeque::new();
     /// ```
     #[inline]
-    pub fn new() -> ArrayDeque<A> {
+    pub fn new() -> ArrayDeque<A, W> {
         unsafe {
             ArrayDeque {
                 xs: ManuallyDrop::new(mem::uninitialized()),
                 head: ArrayIndex::from(0),
                 tail: ArrayIndex::from(0),
+                marker: marker::PhantomData
             }
         }
     }
@@ -776,7 +1302,7 @@ impl<A: Array> ArrayDeque<A> {
     /// buf.drain(..);
     /// assert!(buf.is_empty());
     /// ```
-    pub fn drain<R>(&mut self, range: R) -> Drain<A>
+    pub fn drain<R>(&mut self, range: R) -> Drain<A, W>
         where R: RangeArgument<usize>
     {
         let len = self.len();
@@ -968,74 +1494,6 @@ impl<A: Array> ArrayDeque<A> {
         }
     }
 
-    /// Inserts an element first in the sequence.
-    ///
-    /// Return `None` if the push succeeds, or and return `Some(` *element* `)`
-    /// if the vector is full.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use arraydeque::ArrayDeque;
-    /// use arraydeque::CapacityError;
-    ///
-    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
-    ///
-    /// buf.push_front(0);
-    /// buf.push_front(1);
-    ///
-    /// let overflow = buf.push_front(2);
-    ///
-    /// assert_eq!(buf.back(), Some(&0));
-    /// assert_eq!(overflow, Err(CapacityError { element: 2 }));
-    /// ```
-    pub fn push_front(&mut self, element: A::Item) -> Result<(), CapacityError<A::Item>> {
-        if !self.is_full() {
-            unsafe {
-                let new_tail = Self::wrap_sub(self.tail(), 1);
-                self.set_tail(new_tail);
-                self.buffer_write(new_tail, element);
-            }
-            Ok(())
-        } else {
-            Err(CapacityError{element})
-        }
-    }
-
-    /// Appends an element to the back of a buffer
-    ///
-    /// Return `None` if the push succeeds, or and return `Some(` *element* `)`
-    /// if the vector is full.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use arraydeque::ArrayDeque;
-    /// use arraydeque::CapacityError;
-    ///
-    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
-    ///
-    /// buf.push_back(0);
-    /// buf.push_back(1);
-    ///
-    /// let overflow = buf.push_back(2);
-    ///
-    /// assert_eq!(buf.back(), Some(&1));
-    /// assert_eq!(overflow, Err(CapacityError { element: 2 }));
-    /// ```
-    pub fn push_back(&mut self, element: A::Item) -> Result<(), CapacityError<A::Item>> {
-        if !self.is_full() {
-            unsafe {
-                let head = self.head();
-                self.set_head(Self::wrap_add(head, 1));
-                self.buffer_write(head, element);
-            }
-            Ok(())
-        } else {
-            Err(CapacityError{element})
-        }
-    }
-
     /// Removes the last element from a buffer and returns it, or `None` if
     /// it is empty.
     ///
@@ -1132,247 +1590,6 @@ impl<A: Array> ArrayDeque<A> {
             return None;
         }
         self.pop_front()
-    }
-
-    /// Inserts an element at `index` within the `ArrayDeque`. Whichever
-    /// end is closer to the insertion point will be moved to make room,
-    /// and all the affected elements will be moved to new positions.
-    ///
-    /// Return `None` if the push succeeds, or and return `Some(` *element* `)`
-    /// if the vector is full.
-    ///
-    /// Element at index 0 is the front of the queue.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `index` is greater than `ArrayDeque`'s length
-    ///
-    /// # Examples
-    /// ```
-    /// use arraydeque::ArrayDeque;
-    /// use arraydeque::CapacityError;
-    ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
-    ///
-    /// buf.push_back(0);
-    /// buf.push_back(1);
-    ///
-    /// buf.insert(0, 2);
-    ///
-    /// let overflow = buf.insert(1, 3);
-    ///
-    /// assert_eq!(buf[0], 2);
-    /// assert_eq!(overflow, Err(CapacityError { element: 3 }));
-    /// ```
-    pub fn insert(&mut self, index: usize, element: A::Item) -> Result<(), CapacityError<A::Item>> {
-        assert!(index <= self.len(), "index out of bounds");
-        if self.is_full() {
-            return Err(CapacityError{element});
-        }
-
-        // Move the least number of elements in the ring buffer and insert
-        // the given object
-        //
-        // At most len/2 - 1 elements will be moved. O(min(n, n-i))
-        //
-        // There are three main cases:
-        //  Elements are contiguous
-        //      - special case when tail is 0
-        //  Elements are discontiguous and the insert is in the tail section
-        //  Elements are discontiguous and the insert is in the head section
-        //
-        // For each of those there are two more cases:
-        //  Insert is closer to tail
-        //  Insert is closer to head
-        //
-        // Key: H - self.head
-        //      T - self.tail
-        //      o - Valid element
-        //      I - Insertion element
-        //      A - The element that should be after the insertion point
-        //      M - Indicates element was moved
-
-        let idx = Self::wrap_add(self.tail(), index);
-
-        let distance_to_tail = index;
-        let distance_to_head = self.len() - index;
-
-        let contiguous = self.is_contiguous();
-
-        match (contiguous, distance_to_tail <= distance_to_head, idx >= self.tail()) {
-            (true, true, _) if index == 0 => {
-                // push_front
-                //
-                //       T
-                //       I             H
-                //      [A o o o o o o . . . . . . . . .]
-                //
-                //                       H         T
-                //      [A o o o o o o o . . . . . I]
-                //
-
-                let new_tail = Self::wrap_sub(self.tail(), 1);
-                unsafe { self.set_tail(new_tail) }
-            }
-            (true, true, _) => {
-                unsafe {
-                    // contiguous, insert closer to tail:
-                    //
-                    //             T   I         H
-                    //      [. . . o o A o o o o . . . . . .]
-                    //
-                    //           T               H
-                    //      [. . o o I A o o o o . . . . . .]
-                    //           M M
-                    //
-                    // contiguous, insert closer to tail and tail is 0:
-                    //
-                    //
-                    //       T   I         H
-                    //      [o o A o o o o . . . . . . . . .]
-                    //
-                    //                       H             T
-                    //      [o I A o o o o o . . . . . . . o]
-                    //       M                             M
-
-                    let tail = self.tail();
-                    let new_tail = Self::wrap_sub(self.tail(), 1);
-
-                    self.copy(new_tail, tail, 1);
-                    // Already moved the tail, so we only copy `index - 1` elements.
-                    self.copy(tail, tail + 1, index - 1);
-
-                    self.set_tail(new_tail);
-                }
-            }
-            (true, false, _) => {
-                unsafe {
-                    //  contiguous, insert closer to head:
-                    //
-                    //             T       I     H
-                    //      [. . . o o o o A o o . . . . . .]
-                    //
-                    //             T               H
-                    //      [. . . o o o o I A o o . . . . .]
-                    //                       M M M
-
-                    let head = self.head();
-                    self.copy(idx + 1, idx, head - idx);
-                    let new_head = Self::wrap_add(self.head(), 1);
-                    self.set_head(new_head);
-                }
-            }
-            (false, true, true) => {
-                unsafe {
-                    // discontiguous, insert closer to tail, tail section:
-                    //
-                    //                   H         T   I
-                    //      [o o o o o o . . . . . o o A o o]
-                    //
-                    //                   H       T
-                    //      [o o o o o o . . . . o o I A o o]
-                    //                           M M
-
-                    let tail = self.tail();
-                    self.copy(tail - 1, tail, index);
-                    self.set_tail(tail - 1);
-                }
-            }
-            (false, false, true) => {
-                unsafe {
-                    // discontiguous, insert closer to head, tail section:
-                    //
-                    //           H             T         I
-                    //      [o o . . . . . . . o o o o o A o]
-                    //
-                    //             H           T
-                    //      [o o o . . . . . . o o o o o I A]
-                    //       M M M                         M
-
-                    // copy elements up to new head
-                    let head = self.head();
-                    self.copy(1, 0, head);
-
-                    // copy last element into empty spot at bottom of buffer
-                    self.copy(0, A::capacity() - 1, 1);
-
-                    // move elements from idx to end forward not including ^ element
-                    self.copy(idx + 1, idx, A::capacity() - 1 - idx);
-
-                    self.set_head(head + 1);
-                }
-            }
-            (false, true, false) if idx == 0 => {
-                unsafe {
-                    // discontiguous, insert is closer to tail, head section,
-                    // and is at index zero in the internal buffer:
-                    //
-                    //       I                   H     T
-                    //      [A o o o o o o o o o . . . o o o]
-                    //
-                    //                           H   T
-                    //      [A o o o o o o o o o . . o o o I]
-                    //                               M M M
-
-                    // copy elements up to new tail
-                    let tail = self.tail();
-                    self.copy(tail - 1, tail, A::capacity() - tail);
-
-                    // copy last element into empty spot at bottom of buffer
-                    self.copy(A::capacity() - 1, 0, 1);
-
-                    self.set_tail(tail - 1);
-                }
-            }
-            (false, true, false) => {
-                unsafe {
-                    // discontiguous, insert closer to tail, head section:
-                    //
-                    //             I             H     T
-                    //      [o o o A o o o o o o . . . o o o]
-                    //
-                    //                           H   T
-                    //      [o o I A o o o o o o . . o o o o]
-                    //       M M                     M M M M
-
-                    let tail = self.tail();
-                    // copy elements up to new tail
-                    self.copy(tail - 1, tail, A::capacity() - tail);
-
-                    // copy last element into empty spot at bottom of buffer
-                    self.copy(A::capacity() - 1, 0, 1);
-
-                    // move elements from idx-1 to end forward not including ^ element
-                    self.copy(0, 1, idx - 1);
-
-                    self.set_tail(tail - 1);
-                }
-            }
-            (false, false, false) => {
-                unsafe {
-                    // discontiguous, insert closer to head, head section:
-                    //
-                    //               I     H           T
-                    //      [o o o o A o o . . . . . . o o o]
-                    //
-                    //                     H           T
-                    //      [o o o o I A o o . . . . . o o o]
-                    //                 M M M
-
-                    let head = self.head();
-                    self.copy(idx + 1, idx, head - idx);
-                    self.set_head(head + 1);
-                }
-            }
-        }
-
-        // tail might've been changed so we need to recalculate
-        let new_idx = Self::wrap_add(self.tail(), index);
-        unsafe {
-            self.buffer_write(new_idx, element);
-        }
-
-        Ok(())
     }
 
     /// Removes and returns the element at `index` from the `ArrayDeque`.
@@ -1635,33 +1852,6 @@ impl<A: Array> ArrayDeque<A> {
         other
     }
 
-    /// Moves all the elements of `other` into `Self`, leaving `other` empty.
-    ///
-    /// Does not extract more items than there is space for. No error
-    /// occurs if there are more iterator elements.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use arraydeque::ArrayDeque;
-    ///
-    /// let mut buf: ArrayDeque<[_; 8]> = ArrayDeque::new();
-    /// let mut other: ArrayDeque<[_; 8]> = ArrayDeque::new();
-    ///
-    /// buf.extend(vec![0, 1]);
-    /// other.extend(vec![2, 3]);
-    /// 
-    /// buf.append(&mut other);
-    /// 
-    /// let expected = vec![0, 1, 2, 3];
-    /// 
-    /// assert!(buf.into_iter().eq(expected.into_iter()));
-    /// assert!(other.is_empty());
-    /// ```
-    pub fn append(&mut self, other: &mut Self) {
-        self.extend(other.drain(..));
-    }
-
     /// Retains only the elements specified by the predicate.
     ///
     /// In other words, remove all elements `e` such that `f(&e)` returns false.
@@ -1702,10 +1892,24 @@ impl<A: Array> ArrayDeque<A> {
     }
 }
 
-impl<A: Array> PartialEq for ArrayDeque<A>
+
+impl<A: Array, W> Drop for ArrayDeque<A, W> {
+    fn drop(&mut self) {
+        self.clear();
+    }
+}
+
+impl<A: Array, W> Default for ArrayDeque<A, W> {
+    #[inline]
+    fn default() -> ArrayDeque<A, W> {
+        ArrayDeque::new()
+    }
+}
+
+impl<A: Array, W> PartialEq for ArrayDeque<A, W>
     where A::Item: PartialEq
 {
-    fn eq(&self, other: &ArrayDeque<A>) -> bool {
+    fn eq(&self, other: &ArrayDeque<A, W>) -> bool {
         if self.len() != other.len() {
             return false;
         }
@@ -1742,26 +1946,26 @@ impl<A: Array> PartialEq for ArrayDeque<A>
     }
 }
 
-impl<A: Array> Eq for ArrayDeque<A> where A::Item: Eq {}
+impl<A: Array, W> Eq for ArrayDeque<A, W> where A::Item: Eq {}
 
-impl<A: Array> PartialOrd for ArrayDeque<A>
+impl<A: Array, W> PartialOrd for ArrayDeque<A, W>
     where A::Item: PartialOrd
 {
-    fn partial_cmp(&self, other: &ArrayDeque<A>) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &ArrayDeque<A, W>) -> Option<Ordering> {
         self.iter().partial_cmp(other.iter())
     }
 }
 
-impl<A: Array> Ord for ArrayDeque<A>
+impl<A: Array, W> Ord for ArrayDeque<A, W>
     where A::Item: Ord
 {
     #[inline]
-    fn cmp(&self, other: &ArrayDeque<A>) -> Ordering {
+    fn cmp(&self, other: &ArrayDeque<A, W>) -> Ordering {
         self.iter().cmp(other.iter())
     }
 }
 
-impl<A: Array> Hash for ArrayDeque<A>
+impl<A: Array, W> Hash for ArrayDeque<A, W>
     where A::Item: Hash
 {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -1772,7 +1976,7 @@ impl<A: Array> Hash for ArrayDeque<A>
     }
 }
 
-impl<A: Array> Index<usize> for ArrayDeque<A> {
+impl<A: Array, W> Index<usize> for ArrayDeque<A, W> {
     type Output = A::Item;
 
     #[inline]
@@ -1788,7 +1992,7 @@ impl<A: Array> Index<usize> for ArrayDeque<A> {
     }
 }
 
-impl<A: Array> IndexMut<usize> for ArrayDeque<A> {
+impl<A: Array, W> IndexMut<usize> for ArrayDeque<A, W> {
     #[inline]
     fn index_mut(&mut self, index: usize) -> &mut A::Item {
         let len = self.len();
@@ -1802,24 +2006,16 @@ impl<A: Array> IndexMut<usize> for ArrayDeque<A> {
     }
 }
 
-impl<A: Array> iter::FromIterator<A::Item> for ArrayDeque<A> {
-    fn from_iter<T: IntoIterator<Item = A::Item>>(iter: T) -> Self {
-        let mut array = ArrayDeque::new();
-        array.extend(iter);
-        array
-    }
-}
-
-impl<A: Array> IntoIterator for ArrayDeque<A> {
+impl<A: Array, W> IntoIterator for ArrayDeque<A, W> {
     type Item = A::Item;
-    type IntoIter = IntoIter<A>;
+    type IntoIter = IntoIter<A, W>;
 
-    fn into_iter(self) -> IntoIter<A> {
+    fn into_iter(self) -> IntoIter<A, W> {
         IntoIter { inner: self }
     }
 }
 
-impl<'a, A: Array> IntoIterator for &'a ArrayDeque<A> {
+impl<'a, A: Array, W> IntoIterator for &'a ArrayDeque<A, W> {
     type Item = &'a A::Item;
     type IntoIter = Iter<'a, A::Item>;
 
@@ -1828,7 +2024,7 @@ impl<'a, A: Array> IntoIterator for &'a ArrayDeque<A> {
     }
 }
 
-impl<'a, A: Array> IntoIterator for &'a mut ArrayDeque<A> {
+impl<'a, A: Array, W> IntoIterator for &'a mut ArrayDeque<A, W> {
     type Item = &'a mut A::Item;
     type IntoIter = IterMut<'a, A::Item>;
 
@@ -1837,21 +2033,7 @@ impl<'a, A: Array> IntoIterator for &'a mut ArrayDeque<A> {
     }
 }
 
-/// Extend the `ArrayDeque` with an iterator.
-///
-/// Does not extract more items than there is space for. No error
-/// occurs if there are more iterator elements.
-#[allow(unused_must_use)]
-impl<A: Array> Extend<A::Item> for ArrayDeque<A> {
-    fn extend<T: IntoIterator<Item = A::Item>>(&mut self, iter: T) {
-        let take = self.capacity() - self.len();
-        for elt in iter.into_iter().take(take) {            
-            self.push_back(elt);
-        }
-    }
-}
-
-impl<A: Array> fmt::Debug for ArrayDeque<A>
+impl<A: Array, W> fmt::Debug for ArrayDeque<A, W>
     where A::Item: fmt::Debug
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -1975,11 +2157,11 @@ impl<'a, T> ExactSizeIterator for IterMut<'a, T> {}
 
 /// By-value `ArrayDeque` iterator
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
-pub struct IntoIter<A: Array> {
-    inner: ArrayDeque<A>,
+pub struct IntoIter<A: Array, W> {
+    inner: ArrayDeque<A, W>,
 }
 
-impl<A: Array> Iterator for IntoIter<A> {
+impl<A: Array, W> Iterator for IntoIter<A, W> {
     type Item = A::Item;
 
     #[inline]
@@ -1994,27 +2176,27 @@ impl<A: Array> Iterator for IntoIter<A> {
     }
 }
 
-impl<A: Array> DoubleEndedIterator for IntoIter<A> {
+impl<A: Array, W> DoubleEndedIterator for IntoIter<A, W> {
     #[inline]
     fn next_back(&mut self) -> Option<A::Item> {
         self.inner.pop_back()
     }
 }
 
-impl<A: Array> ExactSizeIterator for IntoIter<A> {}
+impl<A: Array, W> ExactSizeIterator for IntoIter<A, W> {}
 
 /// Draining `ArrayDeque` iterator
-pub struct Drain<'a, A>
+pub struct Drain<'a, A, W>
     where A: Array,
           A::Item: 'a
 {
     after_tail: usize,
     after_head: usize,
     iter: Iter<'a, A::Item>,
-    deque: *mut ArrayDeque<A>,
+    deque: *mut ArrayDeque<A, W>,
 }
 
-impl<'a, A> Drop for Drain<'a, A>
+impl<'a, A, W> Drop for Drain<'a, A, W>
     where A: Array,
           A::Item: 'a
 {
@@ -2060,7 +2242,7 @@ impl<'a, A> Drop for Drain<'a, A>
     }
 }
 
-impl<'a, A> Iterator for Drain<'a, A>
+impl<'a, A, W> Iterator for Drain<'a, A, W>
     where A: Array,
           A::Item: 'a
 {
@@ -2077,7 +2259,7 @@ impl<'a, A> Iterator for Drain<'a, A>
     }
 }
 
-impl<'a, A> DoubleEndedIterator for Drain<'a, A>
+impl<'a, A, W> DoubleEndedIterator for Drain<'a, A, W>
     where A: Array,
           A::Item: 'a
 {
@@ -2087,7 +2269,7 @@ impl<'a, A> DoubleEndedIterator for Drain<'a, A>
     }
 }
 
-impl<'a, A> ExactSizeIterator for Drain<'a, A>
+impl<'a, A, W> ExactSizeIterator for Drain<'a, A, W>
     where A: Array,
           A::Item: 'a
 {
