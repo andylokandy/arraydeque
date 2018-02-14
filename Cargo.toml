@@ -1,6 +1,6 @@
 [package]
 name = "arraydeque"
-version = "0.2.3"
+version = "0.3.1"
 authors = ["goandylok"]
 license = "MIT/Apache-2.0"
 
@@ -15,16 +15,6 @@ keywords = ["ring", "circular", "stack", "array", "no_std"]
 version = "0.2.12"
 default-features = false
 
-[dependencies.nodrop]
-version = "0.1.8"
-default-features = false
-
-[dependencies.generic-array]
-version = "0.5.1"
-optional = true
-
 [features]
 default = ["std"]
-std = ["odds/std", "nodrop/std"]
-use_union = ["nodrop/use_union"]
-use_generic_array = ["generic-array"]
+std = ["odds/std"]
