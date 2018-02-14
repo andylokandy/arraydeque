@@ -210,9 +210,23 @@ pub use odds::IndexRange as RangeArgument;
 use nodrop::NoDrop;
 
 pub mod array;
+mod logic;
 
 pub use array::Array;
 use array::Index as ArrayIndex;
+
+use logic::CircularBuffer;
+
+use logic::insert::Contiguous as InsertContiguous;
+use logic::insert::Discontiguous as InsertDiscontiguous;
+use logic::insert::Parameters as InsertParameters;
+
+use logic::remove::Contiguous as RemoveContiguous;
+use logic::remove::Discontiguous as RemoveDiscontiguous;
+use logic::remove::Parameters as RemoveParameters;
+
+use logic::copy::Wrapping as CopyWrapping;
+use logic::copy::Parameters as CopyParameters;
 
 unsafe fn new_array<A: Array>() -> A {
     // Note: Returning an uninitialized value here only works
@@ -268,35 +282,10 @@ impl<A: Array> Default for ArrayDeque<A> {
     }
 }
 
-impl<A: Array> ArrayDeque<A> {
+impl<A: Array> CircularBuffer for ArrayDeque<A> {
     #[inline]
-    fn wrap_add(index: usize, addend: usize) -> usize {
-        wrap_add(index, addend, A::capacity())
-    }
-
-    #[inline]
-    fn wrap_sub(index: usize, subtrahend: usize) -> usize {
-        wrap_sub(index, subtrahend, A::capacity())
-    }
-
-    #[inline]
-    fn ptr(&self) -> *const A::Item {
-        self.xs.as_ptr()
-    }
-
-    #[inline]
-    fn ptr_mut(&mut self) -> *mut A::Item {
-        self.xs.as_mut_ptr()
-    }
-
-    #[inline]
-    fn is_contiguous(&self) -> bool {
-        self.tail() <= self.head()
-    }
-
-    #[inline]
-    fn is_full(&self) -> bool {
-        A::capacity() - self.len() == 1
+    fn array_len(&self) -> usize {
+        A::capacity()
     }
 
     #[inline]
@@ -341,6 +330,38 @@ impl<A: Array> ArrayDeque<A> {
                   len);
     }
 
+    #[inline]
+    fn wrap_add(index: usize, addend: usize) -> usize {
+        wrap_add(index, addend, A::capacity())
+    }
+
+    #[inline]
+    fn wrap_sub(index: usize, subtrahend: usize) -> usize {
+        wrap_sub(index, subtrahend, A::capacity())
+    }
+}
+
+impl<A: Array> ArrayDeque<A> {
+    #[inline]
+    fn ptr(&self) -> *const A::Item {
+        self.xs.as_ptr()
+    }
+
+    #[inline]
+    fn ptr_mut(&mut self) -> *mut A::Item {
+        self.xs.as_mut_ptr()
+    }
+
+    #[inline]
+    fn is_contiguous(&self) -> bool {
+        self.tail() <= self.head()
+    }
+
+    #[inline]
+    fn is_full(&self) -> bool {
+        A::capacity() - self.len() == 1
+    }
+
     /// Copies a potentially wrapping block of memory len long from src to dest.
     /// (abs(dst - src) + len) must be no larger than cap() (There must be at
     /// most one continuous overlapping region between src and dest).
@@ -368,98 +389,17 @@ impl<A: Array> ArrayDeque<A> {
         let src_wraps = src_pre_wrap_len < len;
         let dst_wraps = dst_pre_wrap_len < len;
 
-        match (dst_after_src, src_wraps, dst_wraps) {
-            (_, false, false) => {
-                // src doesn't wrap, dst doesn't wrap
-                //
-                //        S . . .
-                // 1 [_ _ A A B B C C _]
-                // 2 [_ _ A A A A B B _]
-                //            D . . .
-                //
-                self.copy(dst, src, len);
-            }
-            (false, false, true) => {
-                // dst before src, src doesn't wrap, dst wraps
-                //
-                //    S . . .
-                // 1 [A A B B _ _ _ C C]
-                // 2 [A A B B _ _ _ A A]
-                // 3 [B B B B _ _ _ A A]
-                //    . .           D .
-                //
-                self.copy(dst, src, dst_pre_wrap_len);
-                self.copy(0, src + dst_pre_wrap_len, len - dst_pre_wrap_len);
-            }
-            (true, false, true) => {
-                // src before dst, src doesn't wrap, dst wraps
-                //
-                //              S . . .
-                // 1 [C C _ _ _ A A B B]
-                // 2 [B B _ _ _ A A B B]
-                // 3 [B B _ _ _ A A A A]
-                //    . .           D .
-                //
-                self.copy(0, src + dst_pre_wrap_len, len - dst_pre_wrap_len);
-                self.copy(dst, src, dst_pre_wrap_len);
-            }
-            (false, true, false) => {
-                // dst before src, src wraps, dst doesn't wrap
-                //
-                //    . .           S .
-                // 1 [C C _ _ _ A A B B]
-                // 2 [C C _ _ _ B B B B]
-                // 3 [C C _ _ _ B B C C]
-                //              D . . .
-                //
-                self.copy(dst, src, src_pre_wrap_len);
-                self.copy(dst + src_pre_wrap_len, 0, len - src_pre_wrap_len);
-            }
-            (true, true, false) => {
-                // src before dst, src wraps, dst doesn't wrap
-                //
-                //    . .           S .
-                // 1 [A A B B _ _ _ C C]
-                // 2 [A A A A _ _ _ C C]
-                // 3 [C C A A _ _ _ C C]
-                //    D . . .
-                //
-                self.copy(dst + src_pre_wrap_len, 0, len - src_pre_wrap_len);
-                self.copy(dst, src, src_pre_wrap_len);
-            }
-            (false, true, true) => {
-                // dst before src, src wraps, dst wraps
-                //
-                //    . . .         S .
-                // 1 [A B C D _ E F G H]
-                // 2 [A B C D _ E G H H]
-                // 3 [A B C D _ E G H A]
-                // 4 [B C C D _ E G H A]
-                //    . .         D . .
-                //
-                debug_assert!(dst_pre_wrap_len > src_pre_wrap_len);
-                let delta = dst_pre_wrap_len - src_pre_wrap_len;
-                self.copy(dst, src, src_pre_wrap_len);
-                self.copy(dst + src_pre_wrap_len, 0, delta);
-                self.copy(0, delta, len - dst_pre_wrap_len);
-            }
-            (true, true, true) => {
-                // src before dst, src wraps, dst wraps
-                //
-                //    . .         S . .
-                // 1 [A B C D _ E F G H]
-                // 2 [A A B D _ E F G H]
-                // 3 [H A B D _ E F G H]
-                // 4 [H A B D _ E F F G]
-                //    . . .         D .
-                //
-                debug_assert!(src_pre_wrap_len > dst_pre_wrap_len);
-                let delta = src_pre_wrap_len - dst_pre_wrap_len;
-                self.copy(delta, 0, len - src_pre_wrap_len);
-                self.copy(0, A::capacity() - delta, delta);
-                self.copy(dst, src, dst_pre_wrap_len);
-            }
-        }
+        let params = CopyParameters {
+            dst: dst,
+            src: src,
+            len: len,
+            dst_after_src: dst_after_src,
+            src_pre_wrap_len: src_pre_wrap_len,
+            dst_pre_wrap_len: dst_pre_wrap_len,
+            src_wraps: src_wraps,
+            dst_wraps: dst_wraps,
+        };
+        CopyWrapping::wrap_copy(self, params);
     }
 
     #[inline]
@@ -522,8 +462,8 @@ impl<A: Array> ArrayDeque<A> {
     #[inline]
     pub fn get(&self, index: usize) -> Option<&A::Item> {
         if index < self.len() {
-            let idx = Self::wrap_add(self.tail(), index);
-            unsafe { Some(&*self.ptr().offset(idx as isize)) }
+            let internal_index = Self::wrap_add(self.tail(), index);
+            unsafe { Some(&*self.ptr().offset(internal_index as isize)) }
         } else {
             None
         }
@@ -551,8 +491,8 @@ impl<A: Array> ArrayDeque<A> {
     #[inline]
     pub fn get_mut(&mut self, index: usize) -> Option<&mut A::Item> {
         if index < self.len() {
-            let idx = Self::wrap_add(self.tail(), index);
-            unsafe { Some(&mut *self.ptr_mut().offset(idx as isize)) }
+            let internal_index = Self::wrap_add(self.tail(), index);
+            unsafe { Some(&mut *self.ptr_mut().offset(internal_index as isize)) }
         } else {
             None
         }
@@ -1200,178 +1140,22 @@ impl<A: Array> ArrayDeque<A> {
         //      A - The element that should be after the insertion point
         //      M - Indicates element was moved
 
-        let idx = Self::wrap_add(self.tail(), index);
+        let internal_index = Self::wrap_add(self.tail(), index);
 
         let distance_to_tail = index;
         let distance_to_head = self.len() - index;
 
-        let contiguous = self.is_contiguous();
+        let params = InsertParameters {
+            index: index,
+            internal_index: internal_index,
+            distance_to_tail: distance_to_tail,
+            distance_to_head: distance_to_head,
+        };
 
-        match (contiguous, distance_to_tail <= distance_to_head, idx >= self.tail()) {
-            (true, true, _) if index == 0 => {
-                // push_front
-                //
-                //       T
-                //       I             H
-                //      [A o o o o o o . . . . . . . . .]
-                //
-                //                       H         T
-                //      [A o o o o o o o . . . . . I]
-                //
-
-                let new_tail = Self::wrap_sub(self.tail(), 1);
-                unsafe { self.set_tail(new_tail) }
-            }
-            (true, true, _) => {
-                unsafe {
-                    // contiguous, insert closer to tail:
-                    //
-                    //             T   I         H
-                    //      [. . . o o A o o o o . . . . . .]
-                    //
-                    //           T               H
-                    //      [. . o o I A o o o o . . . . . .]
-                    //           M M
-                    //
-                    // contiguous, insert closer to tail and tail is 0:
-                    //
-                    //
-                    //       T   I         H
-                    //      [o o A o o o o . . . . . . . . .]
-                    //
-                    //                       H             T
-                    //      [o I A o o o o o . . . . . . . o]
-                    //       M                             M
-
-                    let tail = self.tail();
-                    let new_tail = Self::wrap_sub(self.tail(), 1);
-
-                    self.copy(new_tail, tail, 1);
-                    // Already moved the tail, so we only copy `index - 1` elements.
-                    self.copy(tail, tail + 1, index - 1);
-
-                    self.set_tail(new_tail);
-                }
-            }
-            (true, false, _) => {
-                unsafe {
-                    //  contiguous, insert closer to head:
-                    //
-                    //             T       I     H
-                    //      [. . . o o o o A o o . . . . . .]
-                    //
-                    //             T               H
-                    //      [. . . o o o o I A o o . . . . .]
-                    //                       M M M
-
-                    let head = self.head();
-                    self.copy(idx + 1, idx, head - idx);
-                    let new_head = Self::wrap_add(self.head(), 1);
-                    self.set_head(new_head);
-                }
-            }
-            (false, true, true) => {
-                unsafe {
-                    // discontiguous, insert closer to tail, tail section:
-                    //
-                    //                   H         T   I
-                    //      [o o o o o o . . . . . o o A o o]
-                    //
-                    //                   H       T
-                    //      [o o o o o o . . . . o o I A o o]
-                    //                           M M
-
-                    let tail = self.tail();
-                    self.copy(tail - 1, tail, index);
-                    self.set_tail(tail - 1);
-                }
-            }
-            (false, false, true) => {
-                unsafe {
-                    // discontiguous, insert closer to head, tail section:
-                    //
-                    //           H             T         I
-                    //      [o o . . . . . . . o o o o o A o]
-                    //
-                    //             H           T
-                    //      [o o o . . . . . . o o o o o I A]
-                    //       M M M                         M
-
-                    // copy elements up to new head
-                    let head = self.head();
-                    self.copy(1, 0, head);
-
-                    // copy last element into empty spot at bottom of buffer
-                    self.copy(0, A::capacity() - 1, 1);
-
-                    // move elements from idx to end forward not including ^ element
-                    self.copy(idx + 1, idx, A::capacity() - 1 - idx);
-
-                    self.set_head(head + 1);
-                }
-            }
-            (false, true, false) if idx == 0 => {
-                unsafe {
-                    // discontiguous, insert is closer to tail, head section,
-                    // and is at index zero in the internal buffer:
-                    //
-                    //       I                   H     T
-                    //      [A o o o o o o o o o . . . o o o]
-                    //
-                    //                           H   T
-                    //      [A o o o o o o o o o . . o o o I]
-                    //                               M M M
-
-                    // copy elements up to new tail
-                    let tail = self.tail();
-                    self.copy(tail - 1, tail, A::capacity() - tail);
-
-                    // copy last element into empty spot at bottom of buffer
-                    self.copy(A::capacity() - 1, 0, 1);
-
-                    self.set_tail(tail - 1);
-                }
-            }
-            (false, true, false) => {
-                unsafe {
-                    // discontiguous, insert closer to tail, head section:
-                    //
-                    //             I             H     T
-                    //      [o o o A o o o o o o . . . o o o]
-                    //
-                    //                           H   T
-                    //      [o o I A o o o o o o . . o o o o]
-                    //       M M                     M M M M
-
-                    let tail = self.tail();
-                    // copy elements up to new tail
-                    self.copy(tail - 1, tail, A::capacity() - tail);
-
-                    // copy last element into empty spot at bottom of buffer
-                    self.copy(A::capacity() - 1, 0, 1);
-
-                    // move elements from idx-1 to end forward not including ^ element
-                    self.copy(0, 1, idx - 1);
-
-                    self.set_tail(tail - 1);
-                }
-            }
-            (false, false, false) => {
-                unsafe {
-                    // discontiguous, insert closer to head, head section:
-                    //
-                    //               I     H           T
-                    //      [o o o o A o o . . . . . . o o o]
-                    //
-                    //                     H           T
-                    //      [o o o o I A o o . . . . . o o o]
-                    //                 M M M
-
-                    let head = self.head();
-                    self.copy(idx + 1, idx, head - idx);
-                    self.set_head(head + 1);
-                }
-            }
+        if self.is_contiguous() {
+            unsafe { InsertContiguous::insert(self, params); }
+        } else {
+            unsafe { InsertDiscontiguous::insert(self, params); }
         }
 
         // tail might've been changed so we need to recalculate
@@ -1426,143 +1210,24 @@ impl<A: Array> ArrayDeque<A> {
         //      R - Indicates element that is being removed
         //      M - Indicates element was moved
 
-        let idx = Self::wrap_add(self.tail(), index);
+        let internal_index = Self::wrap_add(self.tail(), index);
 
-        let elem = unsafe { Some(self.buffer_read(idx)) };
+        let elem = unsafe { Some(self.buffer_read(internal_index)) };
 
         let distance_to_tail = index;
         let distance_to_head = self.len() - index;
 
-        let contiguous = self.is_contiguous();
+        let params = RemoveParameters {
+            index: index,
+            internal_index: internal_index,
+            distance_to_tail: distance_to_tail,
+            distance_to_head: distance_to_head,
+        };
 
-        match (contiguous, distance_to_tail <= distance_to_head, idx >= self.tail()) {
-            (true, true, _) => {
-                unsafe {
-                    // contiguous, remove closer to tail:
-                    //
-                    //             T   R         H
-                    //      [. . . o o x o o o o . . . . . .]
-                    //
-                    //               T           H
-                    //      [. . . . o o o o o o . . . . . .]
-                    //               M M
-
-                    let tail = self.tail();
-                    self.copy(tail + 1, tail, index);
-                    self.set_tail(tail + 1);
-                }
-            }
-            (true, false, _) => {
-                unsafe {
-                    // contiguous, remove closer to head:
-                    //
-                    //             T       R     H
-                    //      [. . . o o o o x o o . . . . . .]
-                    //
-                    //             T           H
-                    //      [. . . o o o o o o . . . . . . .]
-                    //                     M M
-
-                    let head = self.head();
-                    self.copy(idx, idx + 1, head - idx - 1);
-                    self.set_head(head - 1);
-                }
-            }
-            (false, true, true) => {
-                unsafe {
-                    // discontiguous, remove closer to tail, tail section:
-                    //
-                    //                   H         T   R
-                    //      [o o o o o o . . . . . o o x o o]
-                    //
-                    //                   H           T
-                    //      [o o o o o o . . . . . . o o o o]
-                    //                               M M
-
-                    let tail = self.tail();
-                    self.copy(tail + 1, tail, index);
-                    let new_tail = Self::wrap_add(self.tail(), 1);
-                    self.set_tail(new_tail);
-                }
-            }
-            (false, false, false) => {
-                unsafe {
-                    // discontiguous, remove closer to head, head section:
-                    //
-                    //               R     H           T
-                    //      [o o o o x o o . . . . . . o o o]
-                    //
-                    //                   H             T
-                    //      [o o o o o o . . . . . . . o o o]
-                    //               M M
-
-                    let head = self.head();
-                    self.copy(idx, idx + 1, head - idx - 1);
-                    self.set_head(head - 1);
-                }
-            }
-            (false, false, true) => {
-                unsafe {
-                    // discontiguous, remove closer to head, tail section:
-                    //
-                    //             H           T         R
-                    //      [o o o . . . . . . o o o o o x o]
-                    //
-                    //           H             T
-                    //      [o o . . . . . . . o o o o o o o]
-                    //       M M                         M M
-                    //
-                    // or quasi-discontiguous, remove next to head, tail section:
-                    //
-                    //       H                 T         R
-                    //      [. . . . . . . . . o o o o o x o]
-                    //
-                    //                         T           H
-                    //      [. . . . . . . . . o o o o o o .]
-                    //                                   M
-
-                    // draw in elements in the tail section
-                    self.copy(idx, idx + 1, A::capacity() - idx - 1);
-
-                    // Prevents underflow.
-                    if self.head() != 0 {
-                        // copy first element into empty spot
-                        self.copy(A::capacity() - 1, 0, 1);
-
-                        // move elements in the head section backwards
-                        let head = self.head();
-                        self.copy(0, 1, head - 1);
-                    }
-
-                    let new_head = Self::wrap_sub(self.head(), 1);
-                    self.set_head(new_head);
-                }
-            }
-            (false, true, false) => {
-                unsafe {
-                    // discontiguous, remove closer to tail, head section:
-                    //
-                    //           R               H     T
-                    //      [o o x o o o o o o o . . . o o o]
-                    //
-                    //                           H       T
-                    //      [o o o o o o o o o o . . . . o o]
-                    //       M M M                       M M
-
-                    let tail = self.tail();
-                    // draw in elements up to idx
-                    self.copy(1, 0, idx);
-
-                    // copy last element into empty spot
-                    self.copy(0, A::capacity() - 1, 1);
-
-                    // move elements from tail to end forward, excluding the last one
-                    self.copy(tail + 1, tail, A::capacity() - tail - 1);
-
-                    let new_tail = Self::wrap_add(tail, 1);
-                    self.set_tail(new_tail);
-                }
-            }
+        if self.is_contiguous() {
+            unsafe { RemoveContiguous::remove(self, params); }
+        } else {
+            unsafe { RemoveDiscontiguous::remove(self, params); }
         }
 
         return elem;
@@ -1832,7 +1497,7 @@ impl<'a, A: Array> IntoIterator for &'a mut ArrayDeque<A> {
     type Item = &'a mut A::Item;
     type IntoIter = IterMut<'a, A::Item>;
 
-    fn into_iter(mut self) -> IterMut<'a, A::Item> {
+    fn into_iter(self) -> IterMut<'a, A::Item> {
         self.iter_mut()
     }
 }
@@ -2094,7 +1759,7 @@ impl<'a, A> ExactSizeIterator for Drain<'a, A>
 
 #[cfg(test)]
 mod tests {
-    use super::ArrayDeque;
+    use super::*;
     use std::vec::Vec;
 
     #[test]
