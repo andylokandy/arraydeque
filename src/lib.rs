@@ -3439,7 +3439,7 @@ mod test_generic_array {
     use generic_array::GenericArray;
     use generic_array::typenum::U41;
 
-    use super::ArrayDeque;
+    use super::*;
 
     #[test]
     fn any_simple() {
