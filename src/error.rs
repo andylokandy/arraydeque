@@ -1,3 +1,5 @@
+//! Error type for `ArrayDeque<_, Saturating>`.
+
 use std::fmt;
 #[cfg(feature="std")]
 use std::error::Error;
@@ -5,6 +7,7 @@ use std::error::Error;
 /// Error value indicating insufficient capacity
 #[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub struct CapacityError<T = ()> {
+    /// The element that caused the error.
     pub element: T,
 }
 

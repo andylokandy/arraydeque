@@ -176,9 +176,6 @@ pub use array::Array;
 pub use error::CapacityError;
 use array::Index as ArrayIndex;
 
-/// Tagging trait for providing behaviors to `ArrayDeque`.
-pub trait Behavior {}
-
 /// Behavior for `ArrayDeque` that specifies wrapping write semantics.
 ///
 /// ### Pushing to back:
@@ -191,14 +188,6 @@ pub trait Behavior {}
 /// Pushing elements to the **front** of a fixed-size deque that **has already reached its capacity**
 /// causes it to **overwrite** existing elements from the **back**.
 pub use behavior::{Behavior, Saturating, Wrapping};
-
-unsafe fn new_array<A: Array>() -> A {
-    // Note: Returning an uninitialized value here only works
-    // if we can be sure the data is never used. The nullable pointer
-    // inside enum optimization conflicts with this this for example,
-    // so we need to be extra careful. See `NoDrop` enum.
-    mem::uninitialized()
-}
 
 /// A fixed capacity ring buffer.
 ///
@@ -2024,11 +2013,11 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     }
 
     /// Iterates over the iterator's items, adding them to the back of the deque, one by one.
-    /// 
+    ///
     /// Extracts all items from `other` overwriting `self` if necessary.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```text
     /// [_, _, _] <-(+)- [2, 1] => [_, 2, 1]
     /// [_, _, 3] <-(+)- [2, 1] => [3, 2, 1]
@@ -2297,7 +2286,7 @@ impl<'a, A: Array, B: Behavior> IntoIterator for &'a mut ArrayDeque<A, B> {
 impl<A: Array> Extend<A::Item> for ArrayDeque<A, Saturating> {
     fn extend<T: IntoIterator<Item = A::Item>>(&mut self, iter: T) {
         let take = self.capacity() - self.len();
-        for elt in iter.into_iter().take(take) {            
+        for elt in iter.into_iter().take(take) {
             self.push_back(elt);
         }
     }
