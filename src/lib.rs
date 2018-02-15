@@ -2600,21 +2600,21 @@ mod tests {
         macro_rules! test {
             ($behavior:ident) => ({
                 let mut tester: ArrayDeque<[_; 8], $behavior> = ArrayDeque::new();
-        assert_eq!(tester.capacity(), 7);
-        assert_eq!(tester.len(), 0);
+                assert_eq!(tester.capacity(), 7);
+                assert_eq!(tester.len(), 0);
 
-        tester.push_back(1);
-        tester.push_back(2);
-        tester.push_back(3);
-        tester.push_back(4);
-        assert_eq!(tester.len(), 4);
+                tester.push_back(1);
+                tester.push_back(2);
+                tester.push_back(3);
+                tester.push_back(4);
+                assert_eq!(tester.len(), 4);
 
-        assert_eq!(tester.pop_front(), Some(1));
-        assert_eq!(tester.pop_front(), Some(2));
-        assert_eq!(tester.len(), 2);
-        assert_eq!(tester.pop_front(), Some(3));
-        assert_eq!(tester.pop_front(), Some(4));
-        assert_eq!(tester.pop_front(), None);
+                assert_eq!(tester.pop_front(), Some(1));
+                assert_eq!(tester.pop_front(), Some(2));
+                assert_eq!(tester.len(), 2);
+                assert_eq!(tester.pop_front(), Some(3));
+                assert_eq!(tester.pop_front(), Some(4));
+                assert_eq!(tester.pop_front(), None);
             })
         }
 
@@ -2627,20 +2627,20 @@ mod tests {
         macro_rules! test {
             ($behavior:ident) => ({
                 let mut tester: ArrayDeque<[_; 8], $behavior> = ArrayDeque::new();
-        assert_eq!(tester.capacity(), 7);
-        assert_eq!(tester.len(), 0);
+                assert_eq!(tester.capacity(), 7);
+                assert_eq!(tester.len(), 0);
 
-        tester.push_front(1);
-        tester.push_front(2);
-        tester.push_front(3);
-        tester.push_front(4);
-        assert_eq!(tester.len(), 4);
-        assert_eq!(tester.pop_back(), Some(1));
-        assert_eq!(tester.pop_back(), Some(2));
-        assert_eq!(tester.len(), 2);
-        assert_eq!(tester.pop_back(), Some(3));
-        assert_eq!(tester.pop_back(), Some(4));
-        assert_eq!(tester.pop_back(), None);
+                tester.push_front(1);
+                tester.push_front(2);
+                tester.push_front(3);
+                tester.push_front(4);
+                assert_eq!(tester.len(), 4);
+                assert_eq!(tester.pop_back(), Some(1));
+                assert_eq!(tester.pop_back(), Some(2));
+                assert_eq!(tester.len(), 2);
+                assert_eq!(tester.pop_back(), Some(3));
+                assert_eq!(tester.pop_back(), Some(4));
+                assert_eq!(tester.pop_back(), None);
             })
         }
 
@@ -2670,10 +2670,10 @@ mod tests {
             ($behavior:ident) => ({
                 let mut tester: ArrayDeque<[_; 3], $behavior> = ArrayDeque::new();
                 assert_eq!(tester.push_back(1), None);
-        assert_eq!(tester.pop_front(), Some(1));
-        assert_eq!(tester.is_empty(), true);
-        assert_eq!(tester.len(), 0);
-        assert_eq!(tester.pop_front(), None);
+                assert_eq!(tester.pop_front(), Some(1));
+                assert_eq!(tester.is_empty(), true);
+                assert_eq!(tester.len(), 0);
+                assert_eq!(tester.pop_front(), None);
             })
     }
 
@@ -2686,20 +2686,20 @@ mod tests {
         macro_rules! test {
             ($behavior:ident) => ({
                 let mut tester: ArrayDeque<[_; 4], $behavior> = ArrayDeque::new();
-        tester.push_back(1);
-        tester.push_back(2);
-        tester.push_back(3);
-        assert_eq!(tester[0], 1);
-        // pop_front 1 <- [2, 3]
-        assert_eq!(tester.pop_front(), Some(1));
-        assert_eq!(tester[0], 2);
-        assert_eq!(tester.len(), 2);
-        // push_front 0 -> [0, 2, 3]
-        tester.push_front(0);
-        assert_eq!(tester[0], 0);
-        // [0, 2] -> 3 pop_back
-        assert_eq!(tester.pop_back(), Some(3));
-        assert_eq!(tester[1], 2);
+                tester.push_back(1);
+                tester.push_back(2);
+                tester.push_back(3);
+                assert_eq!(tester[0], 1);
+                // pop_front 1 <- [2, 3]
+                assert_eq!(tester.pop_front(), Some(1));
+                assert_eq!(tester[0], 2);
+                assert_eq!(tester.len(), 2);
+                // push_front 0 -> [0, 2, 3]
+                tester.push_front(0);
+                assert_eq!(tester[0], 0);
+                // [0, 2] -> 3 pop_back
+                assert_eq!(tester.pop_back(), Some(3));
+                assert_eq!(tester[1], 2);
             })
         }
 
@@ -2713,11 +2713,11 @@ mod tests {
         macro_rules! test {
             ($behavior:ident) => ({
                 let mut tester: ArrayDeque<[_; 4], $behavior> = ArrayDeque::new();
-        tester.push_back(1);
-        tester.push_back(2);
-        tester[2];
+                tester.push_back(1);
+                tester.push_back(2);
+                tester[2];
             })
-    }
+        }
 
         test!(Saturating);
         test!(Wrapping);
@@ -2728,28 +2728,28 @@ mod tests {
         macro_rules! test {
             ($behavior:ident) => ({
                 let mut tester: ArrayDeque<[_; 3], $behavior> = ArrayDeque::new();
-        tester.push_back(1);
-        tester.push_back(2);
-        {
-            let mut iter = tester.iter();
-            assert_eq!(iter.size_hint(), (2, Some(2)));
-            assert_eq!(iter.next(), Some(&1));
-            assert_eq!(iter.next(), Some(&2));
-            assert_eq!(iter.next(), None);
-            assert_eq!(iter.size_hint(), (0, Some(0)));
-        }
-        tester.pop_front();
-        tester.push_back(3);
-        {
-            let mut iter = (&tester).into_iter();
-            assert_eq!(iter.next(), Some(&2));
+                tester.push_back(1);
+                tester.push_back(2);
+                {
+                    let mut iter = tester.iter();
+                    assert_eq!(iter.size_hint(), (2, Some(2)));
+                    assert_eq!(iter.next(), Some(&1));
+                    assert_eq!(iter.next(), Some(&2));
+                    assert_eq!(iter.next(), None);
+                    assert_eq!(iter.size_hint(), (0, Some(0)));
+                }
+                tester.pop_front();
+                tester.push_back(3);
+                {
+                    let mut iter = (&tester).into_iter();
+                    assert_eq!(iter.next(), Some(&2));
 
-            // test clone
-            let mut iter2 = iter.clone();
-            assert_eq!(iter.next(), Some(&3));
-            assert_eq!(iter.next(), None);
-            assert_eq!(iter2.next(), Some(&3));
-            assert_eq!(iter2.next(), None);
+                    // test clone
+                    let mut iter2 = iter.clone();
+                    assert_eq!(iter.next(), Some(&3));
+                    assert_eq!(iter.next(), None);
+                    assert_eq!(iter2.next(), Some(&3));
+                    assert_eq!(iter2.next(), None);
                 }
             })
         }
@@ -2763,32 +2763,32 @@ mod tests {
         macro_rules! test {
             ($behavior:ident) => ({
                 let mut tester: ArrayDeque<[_; 3], $behavior> = ArrayDeque::new();
-        tester.push_back(1);
-        tester.push_back(2);
-        {
-            let mut iter = tester.iter_mut();
-            assert_eq!(iter.size_hint(), (2, Some(2)));
-            assert_eq!(iter.next(), Some(&mut 1));
-            assert_eq!(iter.next(), Some(&mut 2));
-            assert_eq!(iter.next(), None);
-            assert_eq!(iter.size_hint(), (0, Some(0)));
-        }
-        tester.pop_front();
-        tester.push_back(3);
-        {
-            let mut iter = (&mut tester).into_iter();
-            assert_eq!(iter.next(), Some(&mut 2));
-            assert_eq!(iter.next(), Some(&mut 3));
-            assert_eq!(iter.next(), None);
-        }
-        {
-            // mutation
-            let mut iter = tester.iter_mut();
-            iter.next().map(|n| *n += 1);
-            iter.next().map(|n| *n += 2);
-        }
-        assert_eq!(tester[0], 3);
-        assert_eq!(tester[1], 5);
+                tester.push_back(1);
+                tester.push_back(2);
+                {
+                    let mut iter = tester.iter_mut();
+                    assert_eq!(iter.size_hint(), (2, Some(2)));
+                    assert_eq!(iter.next(), Some(&mut 1));
+                    assert_eq!(iter.next(), Some(&mut 2));
+                    assert_eq!(iter.next(), None);
+                    assert_eq!(iter.size_hint(), (0, Some(0)));
+                }
+                tester.pop_front();
+                tester.push_back(3);
+                {
+                    let mut iter = (&mut tester).into_iter();
+                    assert_eq!(iter.next(), Some(&mut 2));
+                    assert_eq!(iter.next(), Some(&mut 3));
+                    assert_eq!(iter.next(), None);
+                }
+                {
+                    // mutation
+                    let mut iter = tester.iter_mut();
+                    iter.next().map(|n| *n += 1);
+                    iter.next().map(|n| *n += 2);
+                }
+                assert_eq!(tester[0], 3);
+                assert_eq!(tester[1], 5);
             })
         }
 
@@ -2803,43 +2803,43 @@ mod tests {
 
         macro_rules! test {
             ($behavior:ident) => ({
-        {
+                {
                     let mut tester: ArrayDeque<[NoCopy<u8>; 3], $behavior> = ArrayDeque::new();
-            tester.push_back(NoCopy(1));
-            tester.push_back(NoCopy(2));
-            let mut iter = tester.into_iter();
-            assert_eq!(iter.size_hint(), (2, Some(2)));
-            assert_eq!(iter.next(), Some(NoCopy(1)));
-            assert_eq!(iter.next(), Some(NoCopy(2)));
-            assert_eq!(iter.next(), None);
-            assert_eq!(iter.size_hint(), (0, Some(0)));
-        }
-        {
-                            let mut tester: ArrayDeque<[NoCopy<u8>; 3], $behavior> = ArrayDeque::new();
-            tester.push_back(NoCopy(1));
-            tester.push_back(NoCopy(2));
-            tester.pop_front();
-            tester.push_back(NoCopy(3));
-            let mut iter = tester.into_iter();
-            assert_eq!(iter.next(), Some(NoCopy(2)));
-            assert_eq!(iter.next(), Some(NoCopy(3)));
-            assert_eq!(iter.next(), None);
-        }
-        {
-                            let mut tester: ArrayDeque<[NoCopy<u8>; 3], $behavior> = ArrayDeque::new();
-            tester.push_back(NoCopy(1));
-            tester.push_back(NoCopy(2));
-            tester.pop_front();
-            tester.push_back(NoCopy(3));
-            tester.pop_front();
-            tester.push_back(NoCopy(4));
-            let mut iter = tester.into_iter();
-            assert_eq!(iter.next(), Some(NoCopy(3)));
-            assert_eq!(iter.next(), Some(NoCopy(4)));
-            assert_eq!(iter.next(), None);
-        }
+                    tester.push_back(NoCopy(1));
+                    tester.push_back(NoCopy(2));
+                    let mut iter = tester.into_iter();
+                    assert_eq!(iter.size_hint(), (2, Some(2)));
+                    assert_eq!(iter.next(), Some(NoCopy(1)));
+                    assert_eq!(iter.next(), Some(NoCopy(2)));
+                    assert_eq!(iter.next(), None);
+                    assert_eq!(iter.size_hint(), (0, Some(0)));
+                }
+                {
+                                    let mut tester: ArrayDeque<[NoCopy<u8>; 3], $behavior> = ArrayDeque::new();
+                    tester.push_back(NoCopy(1));
+                    tester.push_back(NoCopy(2));
+                    tester.pop_front();
+                    tester.push_back(NoCopy(3));
+                    let mut iter = tester.into_iter();
+                    assert_eq!(iter.next(), Some(NoCopy(2)));
+                    assert_eq!(iter.next(), Some(NoCopy(3)));
+                    assert_eq!(iter.next(), None);
+                }
+                {
+                                    let mut tester: ArrayDeque<[NoCopy<u8>; 3], $behavior> = ArrayDeque::new();
+                    tester.push_back(NoCopy(1));
+                    tester.push_back(NoCopy(2));
+                    tester.pop_front();
+                    tester.push_back(NoCopy(3));
+                    tester.pop_front();
+                    tester.push_back(NoCopy(4));
+                    let mut iter = tester.into_iter();
+                    assert_eq!(iter.next(), Some(NoCopy(3)));
+                    assert_eq!(iter.next(), Some(NoCopy(4)));
+                    assert_eq!(iter.next(), None);
+                }
             })
-    }
+        }
 
         test!(Saturating);
         test!(Wrapping);
@@ -2849,30 +2849,30 @@ mod tests {
     fn any_drain() {
         macro_rules! test {
             ($behavior:ident) => ({
-        const CAP: usize = 7;
+                const CAP: usize = 7;
                 let mut tester: ArrayDeque<[_; CAP + 1], $behavior> = ArrayDeque::new();
 
-        for padding in 0..CAP {
-            for drain_start in 0..CAP {
-                for drain_end in drain_start..CAP {
-                    // deque starts from different tail position
-                    unsafe {
-                        tester.set_head(padding);
-                        tester.set_tail(padding);
+                for padding in 0..CAP {
+                    for drain_start in 0..CAP {
+                        for drain_end in drain_start..CAP {
+                            // deque starts from different tail position
+                            unsafe {
+                                tester.set_head(padding);
+                                tester.set_tail(padding);
+                            }
+
+                            tester.extend(0..CAP);
+
+                            let mut expected = vec![0, 1, 2, 3, 4, 5, 6];
+                            let drains: Vec<_> = tester.drain(drain_start..drain_end).collect();
+                            let expected_drains: Vec<_> = expected.drain(drain_start..drain_end).collect();
+                            assert_eq!(drains, expected_drains);
+                            assert_eq!(tester.len(), expected.len());
+                        }
                     }
-
-                    tester.extend(0..CAP);
-
-                    let mut expected = vec![0, 1, 2, 3, 4, 5, 6];
-                    let drains: Vec<_> = tester.drain(drain_start..drain_end).collect();
-                    let expected_drains: Vec<_> = expected.drain(drain_start..drain_end).collect();
-                    assert_eq!(drains, expected_drains);
-                    assert_eq!(tester.len(), expected.len());
                 }
-            }
-        }
             })
-    }
+        }
 
         test!(Saturating);
         test!(Wrapping);
@@ -2960,29 +2960,29 @@ mod tests {
     fn any_as_slice() {
         macro_rules! test {
             ($behavior:ident) => ({
-        const CAP: usize = 10;
+                const CAP: usize = 10;
                 let mut tester = ArrayDeque::<[_; CAP], $behavior>::new();
 
-        for len in 0..CAP - 1 {
-            for padding in 0..CAP {
-                // deque starts from different tail position
-                unsafe {
-                    tester.set_head(padding);
-                    tester.set_tail(padding);
-                }
+                for len in 0..CAP - 1 {
+                    for padding in 0..CAP {
+                        // deque starts from different tail position
+                        unsafe {
+                            tester.set_head(padding);
+                            tester.set_tail(padding);
+                        }
 
-                let mut expected = vec![];
-                tester.extend(0..len);
-                expected.extend(0..len);
+                        let mut expected = vec![];
+                        tester.extend(0..len);
+                        expected.extend(0..len);
 
-                let split_idx = CAP - padding;
-                if split_idx < len {
-                    assert_eq!(tester.as_slices(), expected[..].split_at(split_idx));
-                } else {
-                    assert_eq!(tester.as_slices(), (&expected[..], &[][..]));
+                        let split_idx = CAP - padding;
+                        if split_idx < len {
+                            assert_eq!(tester.as_slices(), expected[..].split_at(split_idx));
+                        } else {
+                            assert_eq!(tester.as_slices(), (&expected[..], &[][..]));
+                        }
+                    }
                 }
-            }
-        }
             })
     }
 
@@ -2994,32 +2994,32 @@ mod tests {
     fn any_partial_equal() {
         macro_rules! test {
             ($behavior:ident) => ({
-        const CAP: usize = 10;
+                const CAP: usize = 10;
                 let mut tester = ArrayDeque::<[f64; CAP], $behavior>::new();
 
-        for len in 0..CAP - 1 {
-            for padding in 0..CAP {
-                // deque starts from different tail position
-                unsafe {
-                    tester.set_head(padding);
-                    tester.set_tail(padding);
-                }
-
-                                let mut expected = ArrayDeque::<[f64; CAP], $behavior>::new();
-                for x in 0..len {
-                    tester.push_back(x as f64);
-                    expected.push_back(x as f64);
-                }
-                assert_eq!(tester, expected);
-
-                // test negative
-                if len > 2 {
-                    tester.pop_front();
-                    expected.pop_back();
-                    assert!(tester != expected);
+                for len in 0..CAP - 1 {
+                    for padding in 0..CAP {
+                        // deque starts from different tail position
+                        unsafe {
+                            tester.set_head(padding);
+                            tester.set_tail(padding);
                         }
+
+                                        let mut expected = ArrayDeque::<[f64; CAP], $behavior>::new();
+                        for x in 0..len {
+                            tester.push_back(x as f64);
+                            expected.push_back(x as f64);
+                        }
+                        assert_eq!(tester, expected);
+
+                        // test negative
+                        if len > 2 {
+                            tester.pop_front();
+                            expected.pop_back();
+                            assert!(tester != expected);
+                        }
+                    }
                 }
-            }
             })
         }
 
@@ -3032,8 +3032,8 @@ mod tests {
         macro_rules! test {
             ($behavior:ident) => ({
                 let mut tester = ArrayDeque::<[_; 5], $behavior>::new();
-        tester.extend(0..4);
-        assert_eq!(format!("{:?}", tester), "[0, 1, 2, 3]");
+                tester.extend(0..4);
+                assert_eq!(format!("{:?}", tester), "[0, 1, 2, 3]");
             })
         }
 
@@ -3081,47 +3081,47 @@ mod tests {
     fn any_swap_front_back_remove() {
         macro_rules! test {
             ($behavior:ident) => ({
-        fn test(back: bool) {
-            const CAP: usize = 16;
-                            let mut tester = ArrayDeque::<[_; CAP], $behavior>::new();
-            let usable_cap = tester.capacity();
-            let final_len = usable_cap / 2;
+                fn test(back: bool) {
+                    const CAP: usize = 16;
+                                    let mut tester = ArrayDeque::<[_; CAP], $behavior>::new();
+                    let usable_cap = tester.capacity();
+                    let final_len = usable_cap / 2;
 
-            for len in 0..final_len {
-                        let expected: Vec<_> = if back {
-                    (0..len).collect()
-                } else {
-                    (0..len).rev().collect()
-                };
-                for padding in 0..usable_cap {
-                    unsafe {
-                        tester.set_tail(padding);
-                        tester.set_head(padding);
+                    for len in 0..final_len {
+                                let expected: Vec<_> = if back {
+                            (0..len).collect()
+                        } else {
+                            (0..len).rev().collect()
+                        };
+                        for padding in 0..usable_cap {
+                            unsafe {
+                                tester.set_tail(padding);
+                                tester.set_head(padding);
+                            }
+                            if back {
+                                for i in 0..len * 2 {
+                                    tester.push_front(i);
+                                }
+                                for i in 0..len {
+                                    assert_eq!(tester.swap_remove_back(i), Some(len * 2 - 1 - i));
+                                }
+                            } else {
+                                for i in 0..len * 2 {
+                                    tester.push_back(i);
+                                }
+                                for i in 0..len {
+                                    let idx = tester.len() - 1 - i;
+                                    assert_eq!(tester.swap_remove_front(idx), Some(len * 2 - 1 - i));
+                                }
+                            }
+                            assert!(tester.tail() < CAP);
+                            assert!(tester.head() < CAP);
+                            assert_eq!(tester, expected);
+                        }
                     }
-                    if back {
-                        for i in 0..len * 2 {
-                            tester.push_front(i);
-                        }
-                        for i in 0..len {
-                            assert_eq!(tester.swap_remove_back(i), Some(len * 2 - 1 - i));
-                        }
-                    } else {
-                        for i in 0..len * 2 {
-                            tester.push_back(i);
-                        }
-                        for i in 0..len {
-                            let idx = tester.len() - 1 - i;
-                            assert_eq!(tester.swap_remove_front(idx), Some(len * 2 - 1 - i));
-                        }
-                    }
-                    assert!(tester.tail() < CAP);
-                    assert!(tester.head() < CAP);
-                    assert_eq!(tester, expected);
                 }
-            }
-        }
-        test(true);
-        test(false);
+                test(true);
+                test(false);
             })
         }
 
@@ -3135,14 +3135,14 @@ mod tests {
             ($behavior:ident) => ({
                 const CAP: usize = 11;
                 let mut tester: ArrayDeque<[_; CAP], $behavior> = ArrayDeque::new();
-        for padding in 0..CAP {
-            unsafe {
-                tester.set_tail(padding);
-                tester.set_head(padding);
-            }
-            tester.extend(0..CAP);
-            tester.retain(|x| x % 2 == 0);
-            assert_eq!(tester.iter().count(), CAP / 2);
+                for padding in 0..CAP {
+                    unsafe {
+                        tester.set_tail(padding);
+                        tester.set_head(padding);
+                    }
+                    tester.extend(0..CAP);
+                    tester.retain(|x| x % 2 == 0);
+                    assert_eq!(tester.iter().count(), CAP / 2);
                 }
             })
         }
@@ -3323,26 +3323,26 @@ mod tests {
     fn any_split_off() {
         macro_rules! test {
             ($behavior:ident) => ({
-        const CAP: usize = 16;
+                const CAP: usize = 16;
                 let mut tester = ArrayDeque::<[_; CAP], $behavior>::new();
-        for len in 0..CAP {
-            // index to split at
-            for at in 0..len + 1 {
-                for padding in 0..CAP {
-                            let expected_self: Vec<_> = (0..).take(at).collect();
-                            let expected_other: Vec<_> = (at..).take(len - at).collect();
-                    unsafe {
-                        tester.set_head(padding);
-                        tester.set_tail(padding);
-                    }
-                    for i in 0..len {
-                        tester.push_back(i);
-                    }
-                    let result = tester.split_off(at);
-                    assert!(tester.tail() < CAP);
-                    assert!(tester.head() < CAP);
-                    assert!(result.tail() < CAP);
-                    assert!(result.head() < CAP);
+                for len in 0..CAP {
+                    // index to split at
+                    for at in 0..len + 1 {
+                        for padding in 0..CAP {
+                                    let expected_self: Vec<_> = (0..).take(at).collect();
+                                    let expected_other: Vec<_> = (at..).take(len - at).collect();
+                            unsafe {
+                                tester.set_head(padding);
+                                tester.set_tail(padding);
+                            }
+                            for i in 0..len {
+                                tester.push_back(i);
+                            }
+                            let result = tester.split_off(at);
+                            assert!(tester.tail() < CAP);
+                            assert!(tester.head() < CAP);
+                            assert!(result.tail() < CAP);
+                            assert!(result.head() < CAP);
                             assert_eq!(tester, &expected_self[..]);
                             assert_eq!(result, &expected_other[..]);
                         }
@@ -3417,35 +3417,35 @@ mod tests {
     fn any_remove() {
         macro_rules! test {
             ($behavior:ident) => ({
-        const CAP: usize = 16;
+                const CAP: usize = 16;
                 let mut tester = ArrayDeque::<[_; CAP], $behavior>::new();
 
-        // len is the length *after* removal
-        for len in 0..CAP - 1 {
-            // 0, 1, 2, .., len - 1
-                    let expected: Vec<_> = (0..).take(len).collect();
-            for padding in 0..CAP {
-                for to_remove in 0..len + 1 {
-                    unsafe {
-                        tester.set_tail(padding);
-                        tester.set_head(padding);
-                    }
-                    for i in 0..len {
-                        if i == to_remove {
-                            tester.push_back(1234);
+                // len is the length *after* removal
+                for len in 0..CAP - 1 {
+                    // 0, 1, 2, .., len - 1
+                            let expected: Vec<_> = (0..).take(len).collect();
+                    for padding in 0..CAP {
+                        for to_remove in 0..len + 1 {
+                            unsafe {
+                                tester.set_tail(padding);
+                                tester.set_head(padding);
+                            }
+                            for i in 0..len {
+                                if i == to_remove {
+                                    tester.push_back(1234);
+                                }
+                                tester.push_back(i);
+                            }
+                            if to_remove == len {
+                                tester.push_back(1234);
+                            }
+                            tester.remove(to_remove);
+                            assert!(tester.tail() < CAP);
+                            assert!(tester.head() < CAP);
+                            assert_eq!(tester, expected);
                         }
-                        tester.push_back(i);
                     }
-                    if to_remove == len {
-                        tester.push_back(1234);
-                    }
-                    tester.remove(to_remove);
-                    assert!(tester.tail() < CAP);
-                    assert!(tester.head() < CAP);
-                    assert_eq!(tester, expected);
-                        }
                 }
-            }
             })
         }
 
@@ -3458,8 +3458,8 @@ mod tests {
         macro_rules! test {
             ($behavior:ident) => ({
                 let tester: ArrayDeque<[_; 16], $behavior> = (0..16).into_iter().collect();
-        let cloned = tester.clone();
-        assert_eq!(tester, cloned)
+                let cloned = tester.clone();
+                assert_eq!(tester, cloned)
             })
         }
 
