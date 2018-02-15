@@ -5,7 +5,7 @@
 [![crates.io](https://img.shields.io/crates/v/arraydeque.svg)](https://crates.io/crates/arraydeque)
 [![docs.rs](https://docs.rs/arraydeque/badge.svg)](https://docs.rs/arraydeque)
 
-A circular buffer with fixed capacity.  Requires Rust 1.15+.
+A circular buffer with fixed capacity.  Requires Rust 1.20+.
 
 This crate is inspired by [**bluss/arrayvec**](https://github.com/bluss/arrayvec)
 
@@ -57,6 +57,34 @@ request this via:
 [dependencies]
 arraydeque = { version = "0.2", default-features = false }
 ```
+
+## Behaviors
+
+`ArrayDeque` is defined as `ArrayDeque<A: Array, B: Behavior = Saturating>`,
+with `A` being the backing buffer type and `B` being the deque's behavior.
+
+Possible types for `B: Behavior` are `Saturating` and `Wrapping`.
+
+### Default
+
+`Saturating` is the default behavior when using `ArrayDeque<A: Array>` without an explicit `B: Behavior`.
+
+### Saturating
+
+- **Pushing elements** to the **back** of a fixed-size deque that **has already reached its capacity**
+causes it **exit early, without performing any mutation**.
+- **Pushing elements** to the **front** of a fixed-size deque that **has already reached its capacity**
+causes it **exit early, without performing any mutation**.
+
+### Wrapping
+
+- **Pushing elements** to the **back** of a fixed-size deque that **has already reached its capacity**
+causes it to **overwrite** existing elements from the **front**.
+- **Pushing elements** to the **front** of a fixed-size deque that **has already reached its capacity**
+causes it to **overwrite** existing elements from the **back**.
+
+You find more specific descriptions of the behavior semantics in the corresponding API documentation.
+
 ## Capacity
 
 Note that the `capacity()` is always `backed_array.len() - 1`.
