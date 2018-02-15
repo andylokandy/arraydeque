@@ -1019,8 +1019,10 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         self.pop_front()
     }
 
+    /// Expects at least one remaining free slot in the buffer.
     #[inline]
-    fn push_front_expecting_space_available(&mut self, element: A::Item) {
+    unsafe fn push_front_unchecked(&mut self, element: A::Item) {
+        #![allow(unused_unsafe)]
         debug_assert!(!self.is_full());
         unsafe {
             let new_tail = Self::wrap_sub(self.tail(), 1);
@@ -1029,8 +1031,10 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         }
     }
 
+    /// Expects at least one remaining free slot in the buffer.
     #[inline]
-    fn push_back_expecting_space_available(&mut self, element: A::Item) {
+    unsafe fn push_back_unchecked(&mut self, element: A::Item) {
+        #![allow(unused_unsafe)]
         debug_assert!(!self.is_full());
         unsafe {
             let head = self.head();
@@ -1039,8 +1043,10 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         }
     }
 
+    /// Expects at least one remaining free slot in the buffer.
     #[inline]
-    fn insert_expecting_space_available(&mut self, index: usize, element: A::Item) {
+    unsafe fn insert_unchecked(&mut self, index: usize, element: A::Item) {
+        #![allow(unused_unsafe)]
         debug_assert!(!self.is_full());
 
         assert!(index <= self.len(), "index out of bounds");
@@ -1627,7 +1633,9 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// ```
     pub fn push_front(&mut self, element: A::Item) -> Option<A::Item> {
         if !self.is_full() {
-            self.push_front_expecting_space_available(element);
+            unsafe {
+                self.push_front_unchecked(element);
+            }
             None
         } else {
             Some(element)
@@ -1661,7 +1669,9 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// ```
     pub fn push_back(&mut self, element: A::Item) -> Option<A::Item> {
         if !self.is_full() {
-            self.push_back_expecting_space_available(element);
+            unsafe {
+                self.push_back_unchecked(element);
+            }
             None
         } else {
             Some(element)
@@ -1704,7 +1714,9 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// ```
     pub fn insert(&mut self, index: usize, element: A::Item) -> Option<A::Item> {
         if !self.is_full() {
-            self.insert_expecting_space_available(index, element);
+            unsafe {
+                self.insert_unchecked(index, element);
+            }
             None
         } else {
             Some(element)
@@ -1894,9 +1906,11 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
             } else {
             None
         };
-        self.push_front_expecting_space_available(element);
-        existing
+        unsafe {
+            self.push_front_unchecked(element);
         }
+        existing
+    }
 
     /// Adds an element to the back of the deque.
     ///
@@ -1929,9 +1943,11 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
         } else {
             None
         };
-        self.push_back_expecting_space_available(element);
-        existing
+        unsafe {
+            self.push_back_unchecked(element);
         }
+        existing
+    }
 
     /// Inserts an element at `index` within the `ArrayDeque`. Whichever
     /// end is closer to the insertion point will be moved to make room,
@@ -1972,7 +1988,9 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
         } else {
             None
         };
-        self.insert_expecting_space_available(index, element);
+        unsafe {
+            self.insert_unchecked(index, element);
+        }
         existing
     }
 
@@ -2080,8 +2098,8 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     pub fn prepend<T: Array<Item=A::Item>, B: Behavior>(&mut self, other: &mut ArrayDeque<T, B>) {
         for element in other.drain(..).into_iter().rev() {
             self.push_front(element);
-            }
         }
+    }
 
     /// Appends `self` with `other`'s items, preserving their order, leaving `other` empty.
     ///
@@ -2167,7 +2185,7 @@ impl<'a, A: Array, B: Behavior> PartialEq<&'a [A::Item]> for ArrayDeque<A, B> wh
         }
         self.iter().zip(other.iter()).all(|(l, r)| l == r)
     }
-        }
+}
 
 #[cfg(test)]
 impl<A: Array, B: Behavior> PartialEq<Vec<A::Item>> for ArrayDeque<A, B> where A::Item: PartialEq {
@@ -2214,9 +2232,7 @@ impl<A: Array, B: Behavior> Index<usize> for ArrayDeque<A, B> {
         let len = self.len();
         self.get(index)
             .or_else(|| {
-                panic!("index out of bounds: the len is {} but the index is {}",
-                       len,
-                       index)
+                panic!("index out of bounds: the len is {} but the index is {}", len, index)
             })
             .unwrap()
     }
@@ -2228,9 +2244,7 @@ impl<A: Array, B: Behavior> IndexMut<usize> for ArrayDeque<A, B> {
         let len = self.len();
         self.get_mut(index)
             .or_else(|| {
-                panic!("index out of bounds: the len is {} but the index is {}",
-                       len,
-                       index)
+                panic!("index out of bounds: the len is {} but the index is {}", len, index)
             })
             .unwrap()
     }
