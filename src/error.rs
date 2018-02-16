@@ -1,9 +1,9 @@
 use std::fmt;
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 use std::error::Error;
 
 /// Error value indicating insufficient capacity
-/// 
+///
 /// This error only occur to `ArrayDeque<_, Saturating>`.
 #[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub struct CapacityError<T = ()> {
@@ -13,7 +13,7 @@ pub struct CapacityError<T = ()> {
 
 const CAPERROR: &'static str = "insufficient capacity";
 
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 impl<T> Error for CapacityError<T> {
     fn description(&self) -> &str {
         CAPERROR

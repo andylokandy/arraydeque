@@ -16,37 +16,53 @@ pub unsafe trait Array {
 }
 
 #[doc(hidden)]
-pub trait Index : PartialEq + Copy {
+pub trait Index: PartialEq + Copy {
     fn to_usize(self) -> usize;
     fn from(usize) -> Self;
 }
 
 impl Index for u8 {
     #[inline(always)]
-    fn to_usize(self) -> usize { self as usize }
+    fn to_usize(self) -> usize {
+        self as usize
+    }
     #[inline(always)]
-    fn from(ix: usize) ->  Self { ix as u8 }
+    fn from(ix: usize) -> Self {
+        ix as u8
+    }
 }
 
 impl Index for u16 {
     #[inline(always)]
-    fn to_usize(self) -> usize { self as usize }
+    fn to_usize(self) -> usize {
+        self as usize
+    }
     #[inline(always)]
-    fn from(ix: usize) ->  Self { ix as u16 }
+    fn from(ix: usize) -> Self {
+        ix as u16
+    }
 }
 
 impl Index for u32 {
     #[inline(always)]
-    fn to_usize(self) -> usize { self as usize }
+    fn to_usize(self) -> usize {
+        self as usize
+    }
     #[inline(always)]
-    fn from(ix: usize) ->  Self { ix as u32 }
+    fn from(ix: usize) -> Self {
+        ix as u32
+    }
 }
 
 impl Index for usize {
     #[inline(always)]
-    fn to_usize(self) -> usize { self }
+    fn to_usize(self) -> usize {
+        self
+    }
     #[inline(always)]
-    fn from(ix: usize) ->  Self { ix }
+    fn from(ix: usize) -> Self {
+        ix
+    }
 }
 
 macro_rules! fix_array_impl {
