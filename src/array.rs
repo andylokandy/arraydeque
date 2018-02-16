@@ -15,12 +15,9 @@ pub unsafe trait Array {
     fn capacity() -> usize;
 }
 
-/// Trait for converting indices from/to `usize`.
+#[doc(hidden)]
 pub trait Index : PartialEq + Copy {
-    /// Convert from `T: Index` to `usize`.
     fn to_usize(self) -> usize;
-
-    /// Convert from `usize` to `T: Index`.
     fn from(usize) -> Self;
 }
 
