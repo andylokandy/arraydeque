@@ -1,7 +1,7 @@
 # `arraydeque`
 
-[![build status](https://travis-ci.org/goandylok/arraydeque.svg?branch=master)](https://travis-ci.org/goandylok/arraydeque)
-[![codecov](https://codecov.io/gh/goandylok/arraydeque/branch/master/graph/badge.svg)](https://codecov.io/gh/goandylok/arraydeque)
+[![build status](https://travis-ci.org/andylokandy/arraydeque.svg?branch=master)](https://travis-ci.org/andylokandy/arraydeque)
+[![codecov](https://codecov.io/gh/andylokandy/arraydeque/branch/master/graph/badge.svg)](https://codecov.io/gh/andylokandy/arraydeque)
 [![crates.io](https://img.shields.io/crates/v/arraydeque.svg)](https://crates.io/crates/arraydeque)
 [![docs.rs](https://docs.rs/arraydeque/badge.svg)](https://docs.rs/arraydeque)
 
