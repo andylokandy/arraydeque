@@ -10,6 +10,7 @@ repository = "https://github.com/goandylok/arraydeque"
 homepage = "https://github.com/goandylok/arraydeque"
 
 keywords = ["ring", "circular", "stack", "array", "no_std"]
+categories = ["no-std", "data-structures", "memory-management"]
 
 [dependencies.odds]
 version = "0.2.12"

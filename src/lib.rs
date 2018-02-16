@@ -1,5 +1,5 @@
 //! A circular buffer with fixed capacity.
-//! Requires Rust 1.15+
+//! Requires Rust 1.20+
 //!
 //! It can be stored directly on the stack if needed.
 //!
@@ -7,30 +7,15 @@
 //! container. It also has `O(1)` indexing like a vector. The contained elements
 //! are not required to be copyable
 //!
-//! This crate is inspired by [**bluss/arrayvec**]
-//! [**bluss/arrayvec**]: https://github.com/bluss/arrayvec
+//! This crate is inspired by [**bluss/arrayvec**](https://github.com/bluss/arrayvec)
 //!
 //! # Feature Flags
 //! The **arraydeque** crate has the following cargo feature flags:
 //!
 //! - `std`
 //!   - Optional, enabled by default
+//!   - Conversions between `ArrayDeque` and `Vec`
 //!   - Use libstd
-//!
-//!
-//! - `use_union`
-//!   - Optional
-//!   - Requires Rust nightly channel
-//!   - Use the unstable feature untagged unions for the internal implementation,
-//!     which has reduced space overhead
-//!
-//!
-//! - `use_generic_array`
-//!   - Optional
-//!   - Requires Rust stable channel
-//!   - Depend on generic-array and allow using it just like a fixed
-//!     size array for ArrayDeque storage.
-//!
 //!
 //! # Usage
 //!
@@ -59,84 +44,43 @@
 //! # Capacity
 //!
 //! Note that the `capacity()` is always `backend_array.len() - 1`.
-//! [Read more]
-//!
-//! [Read more]: https://en.wikipedia.org/wiki/Circular_buffer
-//!
-//! # Examples
+//! [Read more](https://en.wikipedia.org/wiki/Circular_buffer)
+//! 
+//! # Behaviors
+//! 
+//! `ArrayDeque` provides two different behaviors of pushing element when it's full, 
+//! `Saturating` and `Wrapping`.
+//! The behavior is indicated by a marker type parameter of `ArrayDeque`, 
+//! which defaults to `Saturating`.
+//! 
+//! ## Saturating
+//! 
+//! Pushing any element when `ArrayDeque` is full will directly return an `Err(CapacityError)`
+//! containing the element attempting to push, leaving the `ArrayDeque` unchanged.
+//! 
 //! ```
-//! extern crate arraydeque;
-//!
-//! use arraydeque::ArrayDeque;
-//!
-//! fn main() {
-//!     let mut vector: ArrayDeque<[_; 8]> = ArrayDeque::new();
-//!     assert_eq!(vector.capacity(), 7);
-//!     assert_eq!(vector.len(), 0);
-//!
-//!     vector.push_back(1);
-//!     vector.push_back(2);
-//!     assert_eq!(vector.len(), 2);
-//!
-//!     assert_eq!(vector.pop_front(), Some(1));
-//!     assert_eq!(vector.pop_front(), Some(2));
-//!     assert_eq!(vector.pop_front(), None);
-//! }
+//! use arraydeque::{ArrayDeque, Saturating, CapacityError};
+//! 
+//! let mut tester: ArrayDeque<[_; 3], Saturating> = ArrayDeque::new();
+//! 
+//! assert_eq!(tester.push_back(1), Ok(()));
+//! assert_eq!(tester.push_back(2), Ok(()));
+//! assert_eq!(tester.push_back(3), Err(CapacityError { element: 3 }));
 //! ```
-//!
-//! # Insert & Remove
+//! 
+//! ## Wrapping
+//! 
+//! Pushing any element when `ArrayDeque` is full will pop an element at
+//! the other side to spare room.
+//! 
 //! ```
-//! use arraydeque::ArrayDeque;
-//!
-//! let mut vector: ArrayDeque<[_; 8]> = ArrayDeque::new();
-//!
-//! vector.push_back(11);
-//! vector.push_back(13);
-//! vector.insert(1, 12);
-//! vector.remove(0);
-//!
-//! assert_eq!(vector[0], 12);
-//! assert_eq!(vector[1], 13);
-//! ```
-//!
-//! # Append & Extend
-//! ```
-//! use arraydeque::ArrayDeque;
-//!
-//! let mut vector: ArrayDeque<[_; 8]> = ArrayDeque::new();
-//! let mut vector2: ArrayDeque<[_; 8]> = ArrayDeque::new();
-//!
-//! vector.extend_back(0..5);
-//! vector2.extend_back(5..7);
-//!
-//! assert_eq!(format!("{:?}", vector), "[0, 1, 2, 3, 4]");
-//! assert_eq!(format!("{:?}", vector2), "[5, 6]");
-//! ```
-//!
-//! # Iterator
-//! ```
-//! use arraydeque::ArrayDeque;
-//!
-//! let mut vector: ArrayDeque<[_; 8]> = ArrayDeque::new();
-//!
-//! vector.extend_back(0..5);
-//!
-//! let iters: Vec<_> = vector.into_iter().collect();
-//! assert_eq!(iters, vec![0, 1, 2, 3, 4]);
-//! ```
-//!
-//! # From Iterator
-//! ```
-//! use arraydeque::ArrayDeque;
-//!
-//! let vector: ArrayDeque<[_; 8]>;
-//! let vector2: ArrayDeque<[_; 8]>;
-//!
-//! vector = vec![0, 1, 2, 3, 4].into_iter().collect();
-//!
-//! vector2 = (0..5).into_iter().collect();
-//!
-//! assert_eq!(vector, vector2);
+//! use arraydeque::{ArrayDeque, Wrapping};
+//! 
+//! let mut tester: ArrayDeque<[_; 3], Wrapping> = ArrayDeque::new();
+//! 
+//! assert_eq!(tester.push_back(1), None);
+//! assert_eq!(tester.push_back(2), None);
+//! assert_eq!(tester.push_back(3), Some(1));
 //! ```
 
 #![cfg_attr(not(any(feature="std", test)), no_std)]
@@ -207,8 +151,7 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// // 3 -(+)-> [2, 1, _] => [3, 2, 1] -> Ok(())
     /// // 4 -(+)-> [3, 2, 1] => [3, 2, 1] -> Err(CapacityError { element: 4 })
     /// 
-    /// use arraydeque::ArrayDeque;
-    /// use arraydeque::CapacityError;
+    /// use arraydeque::{ArrayDeque, CapacityError};
     ///
     /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
     ///
@@ -243,8 +186,7 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// // [_, 1, 2] <-(+)- 3 => [1, 2, 3] -> Ok(())
     /// // [1, 2, 3] <-(+)- 4 => [1, 2, 3] -> Err(CapacityError { element: 4 })
     /// 
-    /// use arraydeque::ArrayDeque;
-    /// use arraydeque::CapacityError;
+    /// use arraydeque::{ArrayDeque, CapacityError};
     ///
     /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
     ///
@@ -287,8 +229,7 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// // [1, 3, _] <-(#1)- 2 => [1, 2, 3] -> Ok(())
     /// // [1, 2, 3] <-(#1)- 4 => [1, 2, 3] -> Err(CapacityError { element: 4 })
     /// 
-    /// use arraydeque::ArrayDeque;
-    /// use arraydeque::CapacityError;
+    /// use arraydeque::{ArrayDeque, CapacityError};
     ///
     /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
     ///
