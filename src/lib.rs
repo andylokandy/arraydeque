@@ -1076,95 +1076,6 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         }
     }
 
-    /// Retrieves an element in the `ArrayDeque` by index.
-    ///
-    /// Element at index 0 is the front of the queue.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use arraydeque::ArrayDeque;
-    ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
-    ///
-    /// buf.push_back(0);
-    /// buf.push_back(1);
-    /// buf.push_back(2);
-    ///
-    /// assert_eq!(buf.get(1), Some(&1));
-    /// ```
-    #[inline]
-    pub fn get(&self, index: usize) -> Option<&A::Item> {
-        if index < self.len() {
-            let idx = Self::wrap_add(self.tail(), index);
-            unsafe { Some(&*self.ptr().offset(idx as isize)) }
-        } else {
-            None
-        }
-    }
-
-    /// Retrieves an element in the `ArrayDeque` mutably by index.
-    ///
-    /// Element at index 0 is the front of the queue.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use arraydeque::ArrayDeque;
-    ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
-    ///
-    /// buf.push_back(0);
-    /// buf.push_back(1);
-    /// buf.push_back(2);
-    ///
-    /// assert_eq!(buf.get_mut(1), Some(&mut 1));
-    /// ```
-    #[inline]
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut A::Item> {
-        if index < self.len() {
-            let idx = Self::wrap_add(self.tail(), index);
-            unsafe { Some(&mut *self.ptr_mut().offset(idx as isize)) }
-        } else {
-            None
-        }
-    }
-
-    /// Swaps elements at indices `i` and `j`.
-    ///
-    /// `i` and `j` may be equal.
-    ///
-    /// Fails if there is no element with either index.
-    ///
-    /// Element at index 0 is the front of the queue.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use arraydeque::ArrayDeque;
-    ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
-    ///
-    /// buf.push_back(0);
-    /// buf.push_back(1);
-    /// buf.push_back(2);
-    ///
-    /// buf.swap(0, 2);
-    ///
-    /// assert_eq!(buf, vec![2, 1, 0].into());
-    /// ```
-    #[inline]
-    pub fn swap(&mut self, i: usize, j: usize) {
-        assert!(i < self.len());
-        assert!(j < self.len());
-        let ri = Self::wrap_add(self.tail(), i);
-        let rj = Self::wrap_add(self.tail(), j);
-        unsafe {
-            ptr::swap(self.ptr_mut().offset(ri as isize),
-                      self.ptr_mut().offset(rj as isize))
-        }
-    }
-
     /// Return the capacity of the `ArrayDeque`.
     ///
     /// # Capacity
@@ -1188,123 +1099,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         A::capacity() - 1
     }
 
-    /// Returns a front-to-back iterator.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use arraydeque::ArrayDeque;
-    ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
-    ///
-    /// buf.push_back(0);
-    /// buf.push_back(1);
-    /// buf.push_back(2);
-    ///
-    /// let expected = vec![0, 1, 2];
-    ///
-    /// assert!(buf.iter().eq(expected.iter()));
-    /// ```
-    #[inline]
-    pub fn iter(&self) -> Iter<A::Item> {
-        Iter {
-            head: self.head(),
-            tail: self.tail(),
-            ring: unsafe { self.buffer_as_slice() },
-        }
-    }
-
-    /// Returns a front-to-back iterator that returns mutable references.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use arraydeque::ArrayDeque;
-    ///
-    /// let mut buf: ArrayDeque<[usize; 4]> = ArrayDeque::new();
-    ///
-    /// buf.push_back(0);
-    /// buf.push_back(1);
-    /// buf.push_back(2);
-    ///
-    /// let mut expected = vec![0, 1, 2];
-    ///
-    /// assert!(buf.iter_mut().eq(expected.iter_mut()));
-    /// ```
-    #[inline]
-    pub fn iter_mut(&mut self) -> IterMut<A::Item> {
-        IterMut {
-            head: self.head(),
-            tail: self.tail(),
-            ring: unsafe { self.buffer_as_mut_slice() },
-        }
-    }
-
-    /// Returns a pair of slices which contain, in order, the contents of the
-    /// `ArrayDeque`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use arraydeque::ArrayDeque;
-    ///
-    /// let mut buf: ArrayDeque<[_; 8]> = ArrayDeque::new();
-    ///
-    /// buf.push_back(0);
-    /// buf.push_back(1);
-    ///
-    /// assert_eq!(buf.as_slices(), (&[0, 1][..], &[][..]));
-    ///
-    /// buf.push_front(2);
-    ///
-    /// assert_eq!(buf.as_slices(), (&[2][..], &[0, 1][..]));
-    /// ```
-    #[inline]
-    pub fn as_slices(&self) -> (&[A::Item], &[A::Item]) {
-        unsafe {
-            let (first, second) = (*(self as *const Self as *mut Self)).as_mut_slices();
-            (first, second)
-        }
-    }
-
-    /// Returns a pair of slices which contain, in order, the contents of the
-    /// `ArrayDeque`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use arraydeque::ArrayDeque;
-    ///
-    /// let mut buf: ArrayDeque<[_; 8]> = ArrayDeque::new();
-    ///
-    /// buf.push_back(0);
-    /// buf.push_back(1);
-    ///
-    /// assert_eq!(buf.as_mut_slices(), (&mut [0, 1][..], &mut[][..]));
-    ///
-    /// buf.push_front(2);
-    ///
-    /// assert_eq!(buf.as_mut_slices(), (&mut[2][..], &mut[0, 1][..]));
-    /// ```
-    #[inline]
-    pub fn as_mut_slices(&mut self) -> (&mut [A::Item], &mut [A::Item]) {
-        unsafe {
-            let contiguous = self.is_contiguous();
-            let head = self.head();
-            let tail = self.tail();
-            let buf = self.buffer_as_mut_slice();
-
-            if contiguous {
-                let (empty, buf) = buf.split_at_mut(0);
-                (&mut buf[tail..head], empty)
-            } else {
-                let (mid, right) = buf.split_at_mut(tail);
-                let (left, _) = mid.split_at_mut(head);
-
-                (right, left)
-            }
-        }
-    }
+    
 
     /// Returns the number of elements in the `ArrayDeque`.
     ///
@@ -1365,93 +1160,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     pub fn is_full(&self) -> bool {
         A::capacity() - self.len() == 1
     }
-
-    /// Create a draining iterator that removes the specified range in the
-    /// `ArrayDeque` and yields the removed items.
-    ///
-    /// Note 1: The element range is removed even if the iterator is not
-    /// consumed until the end.
-    ///
-    /// Note 2: It is unspecified how many elements are removed from the deque,
-    /// if the `Drain` value is not dropped, but the borrow it holds expires
-    /// (eg. due to mem::forget).
-    ///
-    /// # Panics
-    ///
-    /// Panics if the starting point is greater than the end point or if
-    /// the end point is greater than the length of the deque.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use arraydeque::ArrayDeque;
-    ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
-    /// 
-    /// buf.push_back(0);
-    /// buf.push_back(1);
-    /// buf.push_back(2);
-    ///
-    /// {
-    ///     let drain = buf.drain(2..);
-    ///     assert!(vec![2].into_iter().eq(drain));
-    /// }
-    ///
-    /// {
-    ///     let iter = buf.iter();
-    ///     assert!(vec![0, 1].iter().eq(iter));
-    /// }
-    ///
-    /// // A full range clears all contents
-    /// buf.drain(..);
-    /// assert!(buf.is_empty());
-    /// ```
-    pub fn drain<R>(&mut self, range: R) -> Drain<A, B>
-        where R: RangeArgument<usize>
-    {
-        let len = self.len();
-        let start = range.start().unwrap_or(0);
-        let end = range.end().unwrap_or(len);
-        assert!(start <= end, "drain lower bound was too large");
-        assert!(end <= len, "drain upper bound was too large");
-
-        let drain_tail = Self::wrap_add(self.tail(), start);
-        let drain_head = Self::wrap_add(self.tail(), end);
-        let head = self.head();
-
-        unsafe { self.set_head(drain_tail) }
-
-        Drain {
-            deque: self as *mut _,
-            after_tail: drain_head,
-            after_head: head,
-            iter: Iter {
-                tail: drain_tail,
-                head: drain_head,
-                ring: unsafe { self.buffer_as_mut_slice() },
-            },
-        }
-    }
-
-    /// Clears the buffer, removing all values.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use arraydeque::ArrayDeque;
-    ///
-    /// let mut buf: ArrayDeque<[_; 2]> = ArrayDeque::new();
-    ///
-    /// buf.push_back(1);
-    /// buf.clear();
-    ///
-    /// assert!(buf.is_empty());
-    /// ```
-    #[inline]
-    pub fn clear(&mut self) {
-        self.drain(..);
-    }
-
+    
     /// Returns `true` if the `ArrayDeque` contains an element equal to the
     /// given value.
     ///
@@ -1570,6 +1279,112 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         }
     }
 
+    /// Retrieves an element in the `ArrayDeque` by index.
+    ///
+    /// Element at index 0 is the front of the queue.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    ///
+    /// buf.push_back(0);
+    /// buf.push_back(1);
+    /// buf.push_back(2);
+    ///
+    /// assert_eq!(buf.get(1), Some(&1));
+    /// ```
+    #[inline]
+    pub fn get(&self, index: usize) -> Option<&A::Item> {
+        if index < self.len() {
+            let idx = Self::wrap_add(self.tail(), index);
+            unsafe { Some(&*self.ptr().offset(idx as isize)) }
+        } else {
+            None
+        }
+    }
+
+    /// Retrieves an element in the `ArrayDeque` mutably by index.
+    ///
+    /// Element at index 0 is the front of the queue.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    ///
+    /// buf.push_back(0);
+    /// buf.push_back(1);
+    /// buf.push_back(2);
+    ///
+    /// assert_eq!(buf.get_mut(1), Some(&mut 1));
+    /// ```
+    #[inline]
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut A::Item> {
+        if index < self.len() {
+            let idx = Self::wrap_add(self.tail(), index);
+            unsafe { Some(&mut *self.ptr_mut().offset(idx as isize)) }
+        } else {
+            None
+        }
+    }
+
+    /// Returns a front-to-back iterator.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    ///
+    /// buf.push_back(0);
+    /// buf.push_back(1);
+    /// buf.push_back(2);
+    ///
+    /// let expected = vec![0, 1, 2];
+    ///
+    /// assert!(buf.iter().eq(expected.iter()));
+    /// ```
+    #[inline]
+    pub fn iter(&self) -> Iter<A::Item> {
+        Iter {
+            head: self.head(),
+            tail: self.tail(),
+            ring: unsafe { self.buffer_as_slice() },
+        }
+    }
+
+    /// Returns a front-to-back iterator that returns mutable references.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// let mut buf: ArrayDeque<[usize; 4]> = ArrayDeque::new();
+    ///
+    /// buf.push_back(0);
+    /// buf.push_back(1);
+    /// buf.push_back(2);
+    ///
+    /// let mut expected = vec![0, 1, 2];
+    ///
+    /// assert!(buf.iter_mut().eq(expected.iter_mut()));
+    /// ```
+    #[inline]
+    pub fn iter_mut(&mut self) -> IterMut<A::Item> {
+        IterMut {
+            head: self.head(),
+            tail: self.tail(),
+            ring: unsafe { self.buffer_as_mut_slice() },
+        }
+    }
+
     /// Removes the first element and returns it, or `None` if the sequence is
     /// empty.
     ///
@@ -1623,6 +1438,127 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
             let new_head = Self::wrap_sub(self.head(), 1);
             self.set_head(new_head);
             Some(self.buffer_read(new_head))
+        }
+    }    
+
+    /// Clears the buffer, removing all values.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// let mut buf: ArrayDeque<[_; 2]> = ArrayDeque::new();
+    ///
+    /// buf.push_back(1);
+    /// buf.clear();
+    ///
+    /// assert!(buf.is_empty());
+    /// ```
+    #[inline]
+    pub fn clear(&mut self) {
+        self.drain(..);
+    }
+
+    /// Create a draining iterator that removes the specified range in the
+    /// `ArrayDeque` and yields the removed items.
+    ///
+    /// Note 1: The element range is removed even if the iterator is not
+    /// consumed until the end.
+    ///
+    /// Note 2: It is unspecified how many elements are removed from the deque,
+    /// if the `Drain` value is not dropped, but the borrow it holds expires
+    /// (eg. due to mem::forget).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the starting point is greater than the end point or if
+    /// the end point is greater than the length of the deque.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    /// 
+    /// buf.push_back(0);
+    /// buf.push_back(1);
+    /// buf.push_back(2);
+    ///
+    /// {
+    ///     let drain = buf.drain(2..);
+    ///     assert!(vec![2].into_iter().eq(drain));
+    /// }
+    ///
+    /// {
+    ///     let iter = buf.iter();
+    ///     assert!(vec![0, 1].iter().eq(iter));
+    /// }
+    ///
+    /// // A full range clears all contents
+    /// buf.drain(..);
+    /// assert!(buf.is_empty());
+    /// ```
+    pub fn drain<R>(&mut self, range: R) -> Drain<A, B>
+        where R: RangeArgument<usize>
+    {
+        let len = self.len();
+        let start = range.start().unwrap_or(0);
+        let end = range.end().unwrap_or(len);
+        assert!(start <= end, "drain lower bound was too large");
+        assert!(end <= len, "drain upper bound was too large");
+
+        let drain_tail = Self::wrap_add(self.tail(), start);
+        let drain_head = Self::wrap_add(self.tail(), end);
+        let head = self.head();
+
+        unsafe { self.set_head(drain_tail) }
+
+        Drain {
+            deque: self as *mut _,
+            after_tail: drain_head,
+            after_head: head,
+            iter: Iter {
+                tail: drain_tail,
+                head: drain_head,
+                ring: unsafe { self.buffer_as_mut_slice() },
+            },
+        }
+    }
+
+    /// Swaps elements at indices `i` and `j`.
+    ///
+    /// `i` and `j` may be equal.
+    ///
+    /// Fails if there is no element with either index.
+    ///
+    /// Element at index 0 is the front of the queue.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    ///
+    /// buf.push_back(0);
+    /// buf.push_back(1);
+    /// buf.push_back(2);
+    ///
+    /// buf.swap(0, 2);
+    ///
+    /// assert_eq!(buf, vec![2, 1, 0].into());
+    /// ```
+    #[inline]
+    pub fn swap(&mut self, i: usize, j: usize) {
+        assert!(i < self.len());
+        assert!(j < self.len());
+        let ri = Self::wrap_add(self.tail(), i);
+        let rj = Self::wrap_add(self.tail(), j);
+        unsafe {
+            ptr::swap(self.ptr_mut().offset(ri as isize),
+                      self.ptr_mut().offset(rj as isize))
         }
     }
 
@@ -1987,6 +1923,72 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         if del > 0 {
             for _ in (len - del)..self.len() {
                 self.pop_back();
+            }
+        }
+    }
+
+    /// Returns a pair of slices which contain, in order, the contents of the
+    /// `ArrayDeque`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// let mut buf: ArrayDeque<[_; 8]> = ArrayDeque::new();
+    ///
+    /// buf.push_back(0);
+    /// buf.push_back(1);
+    ///
+    /// assert_eq!(buf.as_slices(), (&[0, 1][..], &[][..]));
+    ///
+    /// buf.push_front(2);
+    ///
+    /// assert_eq!(buf.as_slices(), (&[2][..], &[0, 1][..]));
+    /// ```
+    #[inline]
+    pub fn as_slices(&self) -> (&[A::Item], &[A::Item]) {
+        unsafe {
+            let (first, second) = (*(self as *const Self as *mut Self)).as_mut_slices();
+            (first, second)
+        }
+    }
+
+    /// Returns a pair of slices which contain, in order, the contents of the
+    /// `ArrayDeque`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// let mut buf: ArrayDeque<[_; 8]> = ArrayDeque::new();
+    ///
+    /// buf.push_back(0);
+    /// buf.push_back(1);
+    ///
+    /// assert_eq!(buf.as_mut_slices(), (&mut [0, 1][..], &mut[][..]));
+    ///
+    /// buf.push_front(2);
+    ///
+    /// assert_eq!(buf.as_mut_slices(), (&mut[2][..], &mut[0, 1][..]));
+    /// ```
+    #[inline]
+    pub fn as_mut_slices(&mut self) -> (&mut [A::Item], &mut [A::Item]) {
+        unsafe {
+            let contiguous = self.is_contiguous();
+            let head = self.head();
+            let tail = self.tail();
+            let buf = self.buffer_as_mut_slice();
+
+            if contiguous {
+                let (empty, buf) = buf.split_at_mut(0);
+                (&mut buf[tail..head], empty)
+            } else {
+                let (mid, right) = buf.split_at_mut(tail);
+                let (left, _) = mid.split_at_mut(head);
+
+                (right, left)
             }
         }
     }
