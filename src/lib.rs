@@ -396,7 +396,7 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     /// ```
     pub fn push_front(&mut self, element: A::Item) -> Option<A::Item> {
         let existing = if self.is_full() {
-            if A::capacity() == 0 {
+            if self.capacity() == 0 {
                 return Some(element);
             } else {
                 self.pop_back()
@@ -440,7 +440,7 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     /// ```
     pub fn push_back(&mut self, element: A::Item) -> Option<A::Item> {
         let existing = if self.is_full() {
-            if A::capacity() == 0 {
+            if self.capacity() == 0 {
                 return Some(element);
             } else {
                 self.pop_front()
@@ -493,7 +493,7 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
 
     /// Extend deque from back with the contents of an iterator.
     ///
-    /// Extracts all items from `other` overwriting `self` if necessary.
+    /// Extracts all items from iterator and kicks out the frontmost element if necessary.
     ///
     /// # Examples
     ///
