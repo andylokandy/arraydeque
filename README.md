@@ -32,7 +32,7 @@ request this via:
 
 ```toml
 [dependencies]
-arraydeque = { version = "0.3", default-features = false }
+arraydeque = { version = "0.4", default-features = false }
 ```
 
 ## Example

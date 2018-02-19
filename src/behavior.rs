@@ -1,9 +1,9 @@
 //! Behavior semantics for `ArrayDeque`.
-//! 
+//!
 //! `ArrayDeque` provides two different behaviors, `Saturating` and `Wrapping`,
-//! determining whether to remove existing element automatically when pushing 
+//! determining whether to remove existing element automatically when pushing
 //! to a full deque.
-//! 
+//!
 //! The behavior is indicated by a marker type parameter of `ArrayDeque`,
 //! which defaults to `Saturating`.
 //!

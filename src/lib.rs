@@ -23,7 +23,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! arraydeque = "0.3"
+//! arraydeque = "0.4"
 //! ```
 //!
 //! Next, add this to your crate root:
@@ -38,7 +38,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! arraydeque = { version = "0.3", default-features = false }
+//! arraydeque = { version = "0.4", default-features = false }
 //! ```
 //!
 //! # Behaviors
