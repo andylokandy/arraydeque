@@ -57,6 +57,12 @@ fn main() {
 }
 ```
 
+## Changelog
+
+- 0.4.1 Capacity now equal to backend_array.len().
+
+- 0.3.1 Add behaviors: `Saturating` and `Wrapping`.
+
 ## Contribution
 
 All kinds of contribution are welcomed.
