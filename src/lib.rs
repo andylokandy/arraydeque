@@ -54,7 +54,6 @@
 
 #[cfg(not(any(feature = "std", test)))]
 extern crate core as std;
-extern crate odds;
 
 use std::mem;
 use std::mem::ManuallyDrop;
@@ -69,14 +68,14 @@ use std::iter::FromIterator;
 use std::ops::Index;
 use std::ops::IndexMut;
 
-pub use odds::IndexRange as RangeArgument;
-
 mod array;
 mod error;
+mod range;
 pub mod behavior;
 
 pub use array::Array;
 pub use error::CapacityError;
+pub use range::RangeArgument;
 pub use behavior::{Saturating, Wrapping};
 use behavior::Behavior;
 use array::Index as ArrayIndex;

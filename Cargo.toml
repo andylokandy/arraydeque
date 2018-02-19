@@ -12,10 +12,6 @@ homepage = "https://github.com/andylokandy/arraydeque"
 keywords = ["ring", "circular", "stack", "array", "no_std"]
 categories = ["no-std", "data-structures", "memory-management"]
 
-[dependencies.odds]
-version = "0.2.12"
-default-features = false
-
 [features]
 default = ["std"]
-std = ["odds/std"]
+std = []
