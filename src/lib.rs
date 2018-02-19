@@ -61,7 +61,7 @@
 //! ```
 //! use arraydeque::{ArrayDeque, Saturating, CapacityError};
 //!
-//! let mut tester: ArrayDeque<[_; 3], Saturating> = ArrayDeque::new();
+//! let mut tester: ArrayDeque<[_; 2], Saturating> = ArrayDeque::new();
 //!
 //! assert_eq!(tester.push_back(1), Ok(()));
 //! assert_eq!(tester.push_back(2), Ok(()));
@@ -76,7 +76,7 @@
 //! ```
 //! use arraydeque::{ArrayDeque, Wrapping};
 //!
-//! let mut tester: ArrayDeque<[_; 3], Wrapping> = ArrayDeque::new();
+//! let mut tester: ArrayDeque<[_; 2], Wrapping> = ArrayDeque::new();
 //!
 //! assert_eq!(tester.push_back(1), None);
 //! assert_eq!(tester.push_back(2), None);
@@ -132,8 +132,8 @@ use array::Index as ArrayIndex;
 /// [Read more]: https://en.wikipedia.org/wiki/Circular_buffer
 pub struct ArrayDeque<A: Array, B: Behavior = Saturating> {
     xs: ManuallyDrop<A>,
-    head: A::Index,
     tail: A::Index,
+    len: A::Index,
     marker: marker::PhantomData<B>,
 }
 
@@ -153,7 +153,7 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     ///
     /// use arraydeque::{ArrayDeque, CapacityError};
     ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     ///
     /// buf.push_front(1);
     /// buf.push_front(2);
@@ -190,7 +190,7 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     ///
     /// use arraydeque::{ArrayDeque, CapacityError};
     ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     ///
     /// buf.push_back(1);
     /// buf.push_back(2);
@@ -235,7 +235,7 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     ///
     /// use arraydeque::{ArrayDeque, CapacityError};
     ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     ///
     /// buf.insert(0, 3);
     /// buf.insert(0, 1);
@@ -274,7 +274,7 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     ///
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 8]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 7]> = ArrayDeque::new();
     ///
     /// buf.extend_front(vec![9, 8, 7].into_iter());
     /// buf.extend_front(vec![6, 5, 4].into_iter());
@@ -312,7 +312,7 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     ///
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 8]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 7]> = ArrayDeque::new();
     ///
     /// buf.extend_back(vec![1, 2, 3].into_iter());
     /// buf.extend_back(vec![4, 5, 6].into_iter());
@@ -383,7 +383,7 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     ///
     /// use arraydeque::{ArrayDeque, Wrapping};
     ///
-    /// let mut buf: ArrayDeque<[_; 4], Wrapping> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3], Wrapping> = ArrayDeque::new();
     ///
     /// buf.push_front(1);
     /// buf.push_front(2);
@@ -427,7 +427,7 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     ///
     /// use arraydeque::{ArrayDeque, Wrapping};
     ///
-    /// let mut buf: ArrayDeque<[_; 4], Wrapping> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3], Wrapping> = ArrayDeque::new();
     ///
     /// buf.push_back(1);
     /// buf.push_back(2);
@@ -469,7 +469,7 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     ///
     /// use arraydeque::{ArrayDeque, Wrapping};
     ///
-    /// let mut buf: ArrayDeque<[_; 8], Wrapping> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 7], Wrapping> = ArrayDeque::new();
     ///
     /// buf.extend_front(vec![9, 8, 7].into_iter());
     /// buf.extend_front(vec![6, 5, 4].into_iter());
@@ -504,7 +504,7 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     ///
     /// use arraydeque::{ArrayDeque, Wrapping};
     ///
-    /// let mut buf: ArrayDeque<[_; 8], Wrapping> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 7], Wrapping> = ArrayDeque::new();
     ///
     /// buf.extend_back(vec![1, 2, 3].into_iter());
     /// buf.extend_back(vec![4, 5, 6].into_iter());
@@ -584,23 +584,19 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
     #[inline]
     fn is_contiguous(&self) -> bool {
-        self.tail() <= self.head()
+        self.tail() + self.len() < A::capacity()
     }
 
     #[inline]
     fn head(&self) -> usize {
-        self.head.to_usize()
+        let tail = self.tail();
+        let len = self.len();
+        Self::wrap_add(tail, len)        
     }
 
     #[inline]
     fn tail(&self) -> usize {
         self.tail.to_usize()
-    }
-
-    #[inline]
-    unsafe fn set_head(&mut self, head: usize) {
-        debug_assert!(head <= self.capacity());
-        self.head = ArrayIndex::from(head);
     }
 
     #[inline]
@@ -610,12 +606,52 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     }
 
     #[inline]
+    unsafe fn set_len(&mut self, len: usize) {
+        debug_assert!(len <= self.capacity());
+        self.len = ArrayIndex::from(len);
+    }
+
+    #[inline]
+    unsafe fn set_tail_backward(&mut self) {
+        let new_tail = Self::wrap_sub(self.tail(), 1);
+        let new_len = self.len() + 1;
+        self.tail = ArrayIndex::from(new_tail);
+        self.len = ArrayIndex::from(new_len);
+    }
+
+    #[inline]
+    unsafe fn set_tail_forward(&mut self) {
+        debug_assert!(self.len() > 0);
+        
+        let new_tail = Self::wrap_add(self.tail(), 1);
+        let new_len = self.len() - 1;
+        self.tail = ArrayIndex::from(new_tail);
+        self.len = ArrayIndex::from(new_len);
+    }
+
+    #[inline]
+    unsafe fn set_head_backward(&mut self) {
+        debug_assert!(self.len() > 0);
+
+        let new_len = self.len() - 1;
+        self.len = ArrayIndex::from(new_len);
+    }
+
+    #[inline]
+    unsafe fn set_head_forward(&mut self) {
+        debug_assert!(self.len() < A::capacity());
+
+        let new_len = self.len() + 1;
+        self.len = ArrayIndex::from(new_len);
+    }
+
+    #[inline]
     unsafe fn push_front_unchecked(&mut self, element: A::Item) {
         debug_assert!(!self.is_full());
 
-        let new_tail = Self::wrap_sub(self.tail(), 1);
-        self.set_tail(new_tail);
-        self.buffer_write(new_tail, element);
+        self.set_tail_backward();
+        let tail = self.tail();
+        self.buffer_write(tail, element);
     }
 
     #[inline]
@@ -623,8 +659,8 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         debug_assert!(!self.is_full());
 
         let head = self.head();
-        self.set_head(Self::wrap_add(head, 1));
         self.buffer_write(head, element);
+        self.set_head_forward();
     }
 
     #[allow(unused_unsafe)]
@@ -677,8 +713,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                 //      [A o o o o o o o . . . . . I]
                 //
 
-                let new_tail = Self::wrap_sub(self.tail(), 1);
-                unsafe { self.set_tail(new_tail) }
+                self.set_tail_backward();
             }
             (true, true, _) => {
                 unsafe {
@@ -708,7 +743,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                     // Already moved the tail, so we only copy `index - 1` elements.
                     self.copy(tail, tail + 1, index - 1);
 
-                    self.set_tail(new_tail);
+                    self.set_tail_backward();
                 }
             }
             (true, false, _) => {
@@ -724,8 +759,8 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
                     let head = self.head();
                     self.copy(idx + 1, idx, head - idx);
-                    let new_head = Self::wrap_add(self.head(), 1);
-                    self.set_head(new_head);
+
+                    self.set_head_forward();
                 }
             }
             (false, true, true) => {
@@ -741,7 +776,8 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
                     let tail = self.tail();
                     self.copy(tail - 1, tail, index);
-                    self.set_tail(tail - 1);
+
+                    self.set_tail_backward();
                 }
             }
             (false, false, true) => {
@@ -765,7 +801,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                     // move elements from idx to end forward not including ^ element
                     self.copy(idx + 1, idx, A::capacity() - 1 - idx);
 
-                    self.set_head(head + 1);
+                    self.set_head_forward();
                 }
             }
             (false, true, false) if idx == 0 => {
@@ -787,7 +823,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                     // copy last element into empty spot at bottom of buffer
                     self.copy(A::capacity() - 1, 0, 1);
 
-                    self.set_tail(tail - 1);
+                    self.set_tail_backward();
                 }
             }
             (false, true, false) => {
@@ -811,7 +847,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                     // move elements from idx-1 to end forward not including ^ element
                     self.copy(0, 1, idx - 1);
 
-                    self.set_tail(tail - 1);
+                    self.set_tail_backward();
                 }
             }
             (false, false, false) => {
@@ -827,7 +863,8 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
                     let head = self.head();
                     self.copy(idx + 1, idx, head - idx);
-                    self.set_head(head + 1);
+                    
+                    self.set_head_forward();
                 }
             }
         }
@@ -1027,8 +1064,8 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         unsafe {
             ArrayDeque {
                 xs: ManuallyDrop::new(mem::uninitialized()),
-                head: ArrayIndex::from(0),
                 tail: ArrayIndex::from(0),
+                len: ArrayIndex::from(0),
                 marker: marker::PhantomData,
             }
         }
@@ -1046,7 +1083,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[usize; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[usize; 3]> = ArrayDeque::new();
     ///
     /// assert_eq!(buf.capacity(), 3);
     /// ```
@@ -1054,7 +1091,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// [Read more]: https://en.wikipedia.org/wiki/Circular_buffer
     #[inline]
     pub fn capacity(&self) -> usize {
-        A::capacity() - 1
+        A::capacity()
     }
 
     /// Returns the number of elements in the `ArrayDeque`.
@@ -1064,7 +1101,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 2]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 1]> = ArrayDeque::new();
     ///
     /// assert_eq!(buf.len(), 0);
     ///
@@ -1074,7 +1111,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     #[inline]
     pub fn len(&self) -> usize {
-        count(self.tail(), self.head(), A::capacity())
+        self.len.to_usize()
     }
 
     /// Returns true if the buffer contains no elements
@@ -1084,7 +1121,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 2]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 1]> = ArrayDeque::new();
     ///
     /// assert!(buf.is_empty());
     ///
@@ -1094,7 +1131,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.head() == self.tail()
+        self.len() == 0
     }
 
     /// Returns true if the buffer is full.
@@ -1104,7 +1141,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 2]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 1]> = ArrayDeque::new();
     ///
     /// assert!(!buf.is_full());
     ///
@@ -1114,7 +1151,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     #[inline]
     pub fn is_full(&self) -> bool {
-        A::capacity() - self.len() == 1
+        self.len() == self.capacity()
     }
 
     /// Returns `true` if the `ArrayDeque` contains an element equal to the
@@ -1125,7 +1162,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 2]> = ArrayDeque::new();
     ///
     /// buf.push_back(1);
     /// buf.push_back(2);
@@ -1149,7 +1186,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 2]> = ArrayDeque::new();
     /// assert_eq!(buf.front(), None);
     ///
     /// buf.push_back(1);
@@ -1173,7 +1210,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 2]> = ArrayDeque::new();
     /// assert_eq!(buf.front_mut(), None);
     ///
     /// buf.push_back(1);
@@ -1197,7 +1234,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 2]> = ArrayDeque::new();
     ///
     /// buf.push_back(1);
     /// buf.push_back(2);
@@ -1220,7 +1257,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 2]> = ArrayDeque::new();
     ///
     /// buf.push_back(1);
     /// buf.push_back(2);
@@ -1245,7 +1282,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     ///
     /// buf.push_back(0);
     /// buf.push_back(1);
@@ -1272,7 +1309,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     ///
     /// buf.push_back(0);
     /// buf.push_back(1);
@@ -1297,7 +1334,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     ///
     /// buf.push_back(0);
     /// buf.push_back(1);
@@ -1310,8 +1347,8 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     #[inline]
     pub fn iter(&self) -> Iter<A::Item> {
         Iter {
-            head: self.head(),
             tail: self.tail(),
+            len: self.len(),
             ring: unsafe { self.buffer_as_slice() },
         }
     }
@@ -1323,7 +1360,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[usize; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[usize; 3]> = ArrayDeque::new();
     ///
     /// buf.push_back(0);
     /// buf.push_back(1);
@@ -1336,8 +1373,8 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     #[inline]
     pub fn iter_mut(&mut self) -> IterMut<A::Item> {
         IterMut {
-            head: self.head(),
             tail: self.tail(),
+            len: self.len(),
             ring: unsafe { self.buffer_as_mut_slice() },
         }
     }
@@ -1350,7 +1387,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 2]> = ArrayDeque::new();
     ///
     /// buf.push_back(1);
     /// buf.push_back(2);
@@ -1365,7 +1402,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         }
         unsafe {
             let tail = self.tail();
-            self.set_tail(Self::wrap_add(tail, 1));
+            self.set_tail_forward();
             Some(self.buffer_read(tail))
         }
     }
@@ -1378,7 +1415,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 2]> = ArrayDeque::new();
     /// assert_eq!(buf.pop_back(), None);
     ///
     /// buf.push_back(1);
@@ -1392,9 +1429,9 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
             return None;
         }
         unsafe {
-            let new_head = Self::wrap_sub(self.head(), 1);
-            self.set_head(new_head);
-            Some(self.buffer_read(new_head))
+            self.set_head_backward();
+            let head = self.head();
+            Some(self.buffer_read(head))
         }
     }
 
@@ -1405,7 +1442,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 2]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 1]> = ArrayDeque::new();
     ///
     /// buf.push_back(1);
     /// buf.clear();
@@ -1437,7 +1474,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     ///
     /// buf.push_back(0);
     /// buf.push_back(1);
@@ -1469,17 +1506,17 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
         let drain_tail = Self::wrap_add(self.tail(), start);
         let drain_head = Self::wrap_add(self.tail(), end);
-        let head = self.head();
+        let drain_len = end - start;
 
-        unsafe { self.set_head(drain_tail) }
+        unsafe { self.set_len(start) }
 
         Drain {
             deque: self as *mut _,
             after_tail: drain_head,
-            after_head: head,
+            after_len: len - end,
             iter: Iter {
                 tail: drain_tail,
-                head: drain_head,
+                len: drain_len,
                 ring: unsafe { self.buffer_as_mut_slice() },
             },
         }
@@ -1498,7 +1535,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     ///
     /// buf.push_back(0);
     /// buf.push_back(1);
@@ -1536,7 +1573,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     /// assert_eq!(buf.swap_remove_back(0), None);
     ///
     /// buf.push_back(0);
@@ -1570,7 +1607,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     /// assert_eq!(buf.swap_remove_back(0), None);
     ///
     /// buf.push_back(0);
@@ -1602,7 +1639,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     ///
     /// buf.push_back(0);
     /// buf.push_back(1);
@@ -1661,7 +1698,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
                     let tail = self.tail();
                     self.copy(tail + 1, tail, index);
-                    self.set_tail(tail + 1);
+                    self.set_tail_forward();
                 }
             }
             (true, false, _) => {
@@ -1677,7 +1714,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
                     let head = self.head();
                     self.copy(idx, idx + 1, head - idx - 1);
-                    self.set_head(head - 1);
+                    self.set_head_backward();
                 }
             }
             (false, true, true) => {
@@ -1693,8 +1730,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
                     let tail = self.tail();
                     self.copy(tail + 1, tail, index);
-                    let new_tail = Self::wrap_add(self.tail(), 1);
-                    self.set_tail(new_tail);
+                    self.set_tail_forward();
                 }
             }
             (false, false, false) => {
@@ -1710,7 +1746,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
                     let head = self.head();
                     self.copy(idx, idx + 1, head - idx - 1);
-                    self.set_head(head - 1);
+                    self.set_head_backward();
                 }
             }
             (false, false, true) => {
@@ -1746,8 +1782,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                         self.copy(0, 1, head - 1);
                     }
 
-                    let new_head = Self::wrap_sub(self.head(), 1);
-                    self.set_head(new_head);
+                    self.set_head_backward();
                 }
             }
             (false, true, false) => {
@@ -1771,8 +1806,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                     // move elements from tail to end forward, excluding the last one
                     self.copy(tail + 1, tail, A::capacity() - tail - 1);
 
-                    let new_tail = Self::wrap_add(tail, 1);
-                    self.set_tail(new_tail);
+                    self.set_tail_forward();
                 }
             }
         }
@@ -1796,7 +1830,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 3]> = ArrayDeque::new();
     ///
     /// buf.push_back(0);
     /// buf.push_back(1);
@@ -1852,9 +1886,8 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
         // Cleanup where the ends of the buffers are
         unsafe {
-            let head = self.head();
-            self.set_head(Self::wrap_sub(head, other_len));
-            other.set_head(other_len);
+            self.set_len(at);
+            other.set_len(other_len);
         }
 
         other
@@ -1871,7 +1904,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 5]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 4]> = ArrayDeque::new();
     ///
     /// buf.extend_back(0..4);
     /// buf.retain(|&x| x % 2 == 0);
@@ -1906,7 +1939,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 8]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 7]> = ArrayDeque::new();
     ///
     /// buf.push_back(0);
     /// buf.push_back(1);
@@ -1933,7 +1966,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[_; 8]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[_; 7]> = ArrayDeque::new();
     ///
     /// buf.push_back(0);
     /// buf.push_back(1);
@@ -2168,24 +2201,13 @@ fn wrap_sub(index: usize, subtrahend: usize, capacity: usize) -> usize {
     (index + capacity - subtrahend) % capacity
 }
 
-#[inline]
-fn count(tail: usize, head: usize, capacity: usize) -> usize {
-    debug_assert!(head < capacity);
-    debug_assert!(tail < capacity);
-    if head >= tail {
-        head - tail
-    } else {
-        capacity + head - tail
-    }
-}
-
 /// `ArrayDeque` iterator
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 #[derive(Clone)]
 pub struct Iter<'a, T: 'a> {
     ring: &'a [T],
-    head: usize,
     tail: usize,
+    len: usize,
 }
 
 impl<'a, T> Iterator for Iter<'a, T> {
@@ -2193,29 +2215,30 @@ impl<'a, T> Iterator for Iter<'a, T> {
 
     #[inline]
     fn next(&mut self) -> Option<&'a T> {
-        if self.tail == self.head {
+        if self.len == 0 {
             return None;
         }
         let tail = self.tail;
         self.tail = wrap_add(self.tail, 1, self.ring.len());
+        self.len -= 1;
         unsafe { Some(self.ring.get_unchecked(tail)) }
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = count(self.tail, self.head, self.ring.len());
-        (len, Some(len))
+        (self.len, Some(self.len))
     }
 }
 
 impl<'a, T> DoubleEndedIterator for Iter<'a, T> {
     #[inline]
     fn next_back(&mut self) -> Option<&'a T> {
-        if self.tail == self.head {
+        if self.len == 0 {
             return None;
         }
-        self.head = wrap_sub(self.head, 1, self.ring.len());
-        unsafe { Some(self.ring.get_unchecked(self.head)) }
+        self.len -= 1;
+        let head = wrap_add(self.tail, self.len, self.ring.len());
+        unsafe { Some(self.ring.get_unchecked(head)) }
     }
 }
 
@@ -2225,8 +2248,8 @@ impl<'a, T> ExactSizeIterator for Iter<'a, T> {}
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 pub struct IterMut<'a, T: 'a> {
     ring: &'a mut [T],
-    head: usize,
     tail: usize,
+    len: usize,
 }
 
 impl<'a, T> Iterator for IterMut<'a, T> {
@@ -2234,12 +2257,12 @@ impl<'a, T> Iterator for IterMut<'a, T> {
 
     #[inline]
     fn next(&mut self) -> Option<&'a mut T> {
-        if self.tail == self.head {
+        if self.len == 0 {
             return None;
         }
         let tail = self.tail;
         self.tail = wrap_add(self.tail, 1, self.ring.len());
-
+        self.len -= 1;
         unsafe {
             let elem = self.ring.get_unchecked_mut(tail);
             Some(&mut *(elem as *mut _))
@@ -2248,21 +2271,20 @@ impl<'a, T> Iterator for IterMut<'a, T> {
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = count(self.tail, self.head, self.ring.len());
-        (len, Some(len))
+        (self.len, Some(self.len))
     }
 }
 
 impl<'a, T> DoubleEndedIterator for IterMut<'a, T> {
     #[inline]
     fn next_back(&mut self) -> Option<&'a mut T> {
-        if self.tail == self.head {
+        if self.len == 0 {
             return None;
         }
-        self.head = wrap_sub(self.head, 1, self.ring.len());
-
+        self.len -= 1;
+        let head = wrap_add(self.tail, self.len, self.ring.len());
         unsafe {
-            let elem = self.ring.get_unchecked_mut(self.head);
+            let elem = self.ring.get_unchecked_mut(head);
             Some(&mut *(elem as *mut _))
         }
     }
@@ -2308,7 +2330,7 @@ where
     B: Behavior,
 {
     after_tail: usize,
-    after_head: usize,
+    after_len: usize,
     iter: Iter<'a, A::Item>,
     deque: *mut ArrayDeque<A, B>,
 }
@@ -2324,36 +2346,35 @@ where
 
         let source_deque = unsafe { &mut *self.deque };
 
-        // T = source_deque_tail; H = source_deque_head; t = drain_tail; h = drain_head
-        //
-        //        T   t   h   H
-        // [. . . o o x x o o . . .]
-        //
+        let tail_len = source_deque.len();
+        let head_len = self.after_len;
+
         let orig_tail = source_deque.tail();
-        let drain_tail = source_deque.head();
+        let drain_tail = wrap_add(orig_tail, tail_len, A::capacity());
         let drain_head = self.after_tail;
-        let orig_head = self.after_head;
+        let orig_head = wrap_add(drain_head, head_len, A::capacity());
+        let orig_len = wrap_sub(orig_head, orig_tail, A::capacity());
 
-        let tail_len = count(orig_tail, drain_tail, A::capacity());
-        let head_len = count(drain_head, orig_head, A::capacity());
-
-        // Restore the original head value
-        unsafe { source_deque.set_head(orig_head) }
+        // Restore the original len value
+        unsafe { source_deque.set_len(orig_len) }
         match (tail_len, head_len) {
-            (0, 0) => {
-                unsafe { source_deque.set_head(0) }
-                unsafe { source_deque.set_tail(0) }
+            (0, 0) => unsafe { 
+                source_deque.set_tail(0);
+                source_deque.set_len(0); 
             }
-            (0, _) => unsafe { source_deque.set_tail(drain_head) },
-            (_, 0) => unsafe { source_deque.set_head(drain_tail) },
+            (0, _) => unsafe { 
+                source_deque.set_tail(drain_head);
+                source_deque.set_len(head_len);
+            },
+            (_, 0) => unsafe { source_deque.set_len(tail_len) },
             _ => unsafe {
                 if tail_len <= head_len {
-                    let new_tail = ArrayDeque::<A, B>::wrap_sub(drain_head, tail_len);
+                    let new_tail = wrap_sub(drain_head, tail_len, A::capacity());
                     source_deque.set_tail(new_tail);
+                    source_deque.set_len(tail_len + head_len);
                     source_deque.wrap_copy(new_tail, orig_tail, tail_len);
                 } else {
-                    let new_head = ArrayDeque::<A, B>::wrap_add(drain_tail, head_len);
-                    source_deque.set_head(new_head);
+                    source_deque.set_len(tail_len + head_len);
                     source_deque.wrap_copy(drain_tail, drain_head, head_len);
                 }
             },
@@ -2409,7 +2430,7 @@ mod tests {
     fn test_simple() {
         macro_rules! test {
             ($behavior:ident) => ({
-                let mut tester: ArrayDeque<[_; 8], $behavior> = ArrayDeque::new();
+                let mut tester: ArrayDeque<[_; 7], $behavior> = ArrayDeque::new();
                 assert_eq!(tester.capacity(), 7);
                 assert_eq!(tester.len(), 0);
 
@@ -2435,7 +2456,7 @@ mod tests {
     fn test_simple_reversely() {
         macro_rules! test {
             ($behavior:ident) => ({
-                let mut tester: ArrayDeque<[_; 8], $behavior> = ArrayDeque::new();
+                let mut tester: ArrayDeque<[_; 7], $behavior> = ArrayDeque::new();
                 assert_eq!(tester.capacity(), 7);
                 assert_eq!(tester.len(), 0);
 
@@ -2459,12 +2480,12 @@ mod tests {
 
     #[test]
     fn test_overflow_saturating() {
-        let mut tester: ArrayDeque<[_; 3], Saturating> = ArrayDeque::new();
+        let mut tester: ArrayDeque<[_; 2], Saturating> = ArrayDeque::new();
         assert_eq!(tester.push_back(1), Ok(()));
         assert_eq!(tester.push_back(2), Ok(()));
         assert_eq!(tester.push_back(3), Err(CapacityError { element: 3 }));
 
-        let mut tester: ArrayDeque<[_; 3], Saturating> = ArrayDeque::new();
+        let mut tester: ArrayDeque<[_; 2], Saturating> = ArrayDeque::new();
         assert_eq!(tester.insert(0, 1), Ok(()));
         assert_eq!(tester.insert(1, 2), Ok(()));
         assert_eq!(tester.insert(2, 3), Err(CapacityError { element: 3 }));
@@ -2472,7 +2493,7 @@ mod tests {
 
     #[test]
     fn test_overflow_wrapping() {
-        let mut tester: ArrayDeque<[_; 3], Wrapping> = ArrayDeque::new();
+        let mut tester: ArrayDeque<[_; 2], Wrapping> = ArrayDeque::new();
         assert_eq!(tester.push_back(1), None);
         assert_eq!(tester.push_back(2), None);
         assert_eq!(tester.push_back(3), Some(1));
@@ -2480,7 +2501,7 @@ mod tests {
 
     #[test]
     fn test_pop_empty() {
-        let mut tester: ArrayDeque<[_; 3]> = ArrayDeque::new();
+        let mut tester: ArrayDeque<[_; 2]> = ArrayDeque::new();
         assert_eq!(tester.push_back(1), Ok(()));
         assert_eq!(tester.pop_front(), Some(1));
         assert_eq!(tester.is_empty(), true);
@@ -2490,7 +2511,7 @@ mod tests {
 
     #[test]
     fn test_index() {
-        let mut tester: ArrayDeque<[_; 4]> = ArrayDeque::new();
+        let mut tester: ArrayDeque<[_; 3]> = ArrayDeque::new();
         tester.push_back(1);
         tester.push_back(2);
         tester.push_back(3);
@@ -2510,7 +2531,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_index_overflow() {
-        let mut tester: ArrayDeque<[_; 4]> = ArrayDeque::new();
+        let mut tester: ArrayDeque<[_; 3]> = ArrayDeque::new();
         tester.push_back(1);
         tester.push_back(2);
         tester[2];
@@ -2518,7 +2539,7 @@ mod tests {
 
     #[test]
     fn test_iter() {
-        let mut tester: ArrayDeque<[_; 3]> = ArrayDeque::new();
+        let mut tester: ArrayDeque<[_; 2]> = ArrayDeque::new();
         tester.push_back(1);
         tester.push_back(2);
         {
@@ -2546,7 +2567,7 @@ mod tests {
 
     #[test]
     fn test_iter_mut() {
-        let mut tester: ArrayDeque<[_; 3]> = ArrayDeque::new();
+        let mut tester: ArrayDeque<[_; 2]> = ArrayDeque::new();
         tester.push_back(1);
         tester.push_back(2);
         {
@@ -2619,25 +2640,25 @@ mod tests {
 
     #[test]
     fn test_drain() {
-        const CAP: usize = 7;
-        let mut tester: ArrayDeque<[_; CAP + 1]> = ArrayDeque::new();
+        const CAP: usize = 8;
+        let mut tester: ArrayDeque<[_; CAP]> = ArrayDeque::new();
 
         for padding in 0..CAP {
             for drain_start in 0..CAP {
                 for drain_end in drain_start..CAP {
                     // deque starts from different tail position
                     unsafe {
-                        tester.set_head(padding);
+                        tester.set_len(0);
                         tester.set_tail(padding);
                     }
 
                     tester.extend_back(0..CAP);
 
-                    let mut expected = vec![0, 1, 2, 3, 4, 5, 6];
+                    let mut expected = vec![0, 1, 2, 3, 4, 5, 6, 7];
                     let drains: Vec<_> = tester.drain(drain_start..drain_end).collect();
                     let expected_drains: Vec<_> = expected.drain(drain_start..drain_end).collect();
                     assert_eq!(drains, expected_drains);
-                    assert_eq!(tester.len(), expected.len());
+                    assert_eq!(tester, expected.into());
                 }
             }
         }
@@ -2668,7 +2689,7 @@ mod tests {
         // test something with the nullable pointer optimization
         flag.set(0);
         {
-            let mut tester = ArrayDeque::<[_; 4]>::new();
+            let mut tester = ArrayDeque::<[_; 3]>::new();
             tester.push_back(vec![Bump(flag)]);
             tester.push_back(vec![Bump(flag), Bump(flag)]);
             tester.push_back(vec![]);
@@ -2687,11 +2708,11 @@ mod tests {
         const CAP: usize = 10;
         let mut tester = ArrayDeque::<[_; CAP]>::new();
 
-        for len in 0..CAP - 1 {
+        for len in 0..CAP + 1 {
             for padding in 0..CAP {
                 // deque starts from different tail position
                 unsafe {
-                    tester.set_head(padding);
+                    tester.set_len(0);
                     tester.set_tail(padding);
                 }
 
@@ -2714,11 +2735,11 @@ mod tests {
         const CAP: usize = 10;
         let mut tester = ArrayDeque::<[f64; CAP]>::new();
 
-        for len in 0..CAP - 1 {
+        for len in 0..CAP + 1 {
             for padding in 0..CAP {
                 // deque starts from different tail position
                 unsafe {
-                    tester.set_head(padding);
+                    tester.set_len(0);
                     tester.set_tail(padding);
                 }
 
@@ -2763,7 +2784,7 @@ mod tests {
                 for padding in 0..usable_cap {
                     unsafe {
                         tester.set_tail(padding);
-                        tester.set_head(padding);
+                        tester.set_len(0);
                     }
                     if back {
                         for i in 0..len * 2 {
@@ -2798,7 +2819,7 @@ mod tests {
         for padding in 0..CAP {
             unsafe {
                 tester.set_tail(padding);
-                tester.set_head(padding);
+                tester.set_len(0);
             }
             tester.extend_back(0..CAP);
             tester.retain(|x| x % 2 == 0);
@@ -2810,14 +2831,14 @@ mod tests {
     fn test_split_off() {
         const CAP: usize = 16;
         let mut tester = ArrayDeque::<[_; CAP]>::new();
-        for len in 0..CAP {
+        for len in 0..CAP + 1 {
             // index to split at
             for at in 0..len + 1 {
                 for padding in 0..CAP {
                     let expected_self = (0..).take(at).collect();
                     let expected_other = (at..).take(len - at).collect();
                     unsafe {
-                        tester.set_head(padding);
+                        tester.set_len(0);
                         tester.set_tail(padding);
                     }
                     for i in 0..len {
@@ -2841,14 +2862,14 @@ mod tests {
         let mut tester = ArrayDeque::<[_; CAP]>::new();
 
         // len is the length *after* removal
-        for len in 0..CAP - 1 {
+        for len in 0..CAP {
             // 0, 1, 2, .., len - 1
             let expected = (0..).take(len).collect();
             for padding in 0..CAP {
                 for to_remove in 0..len + 1 {
                     unsafe {
                         tester.set_tail(padding);
-                        tester.set_head(padding);
+                        tester.set_len(0);
                     }
                     for i in 0..len {
                         if i == to_remove {
@@ -2888,7 +2909,7 @@ mod tests {
                 for to_insert in 0..len {
                     unsafe {
                         tester.set_tail(padding);
-                        tester.set_head(padding);
+                        tester.set_len(0);
                     }
                     for i in 0..len {
                         if i != to_insert {
@@ -2907,11 +2928,11 @@ mod tests {
     #[test]
     fn test_from_iterator_saturating() {
         assert_eq!(
-            ArrayDeque::<[_; 4], Saturating>::from_iter(vec![1, 2, 3]),
+            ArrayDeque::<[_; 3], Saturating>::from_iter(vec![1, 2, 3]),
             vec![1, 2, 3].into()
         );
         assert_eq!(
-            ArrayDeque::<[_; 4], Saturating>::from_iter(vec![1, 2, 3, 4, 5]),
+            ArrayDeque::<[_; 3], Saturating>::from_iter(vec![1, 2, 3, 4, 5]),
             vec![1, 2, 3].into()
         );
     }
@@ -2919,18 +2940,27 @@ mod tests {
     #[test]
     fn test_from_iterator_wrapping() {
         assert_eq!(
-            ArrayDeque::<[_; 4], Wrapping>::from_iter(vec![1, 2, 3]),
+            ArrayDeque::<[_; 3], Wrapping>::from_iter(vec![1, 2, 3]),
             vec![1, 2, 3].into()
         );
         assert_eq!(
-            ArrayDeque::<[_; 4], Wrapping>::from_iter(vec![1, 2, 3, 4, 5]),
+            ArrayDeque::<[_; 3], Wrapping>::from_iter(vec![1, 2, 3, 4, 5]),
             vec![3, 4, 5].into()
         );
     }
 
     #[test]
+    fn test_extend_front_saturating() {
+        let mut tester: ArrayDeque<[usize; 3], Saturating> = ArrayDeque::new();
+        tester.extend_front(vec![1, 2, 3]);
+        assert_eq!(tester, vec![3, 2, 1].into());
+        tester.extend_front(vec![4, 5]);
+        assert_eq!(tester, vec![3, 2, 1].into());
+    }
+
+    #[test]
     fn test_extend_back_saturating() {
-        let mut tester: ArrayDeque<[usize; 4], Saturating> = ArrayDeque::new();
+        let mut tester: ArrayDeque<[usize; 3], Saturating> = ArrayDeque::new();
         tester.extend_back(vec![1, 2, 3]);
         assert_eq!(tester, vec![1, 2, 3].into());
         tester.extend_back(vec![4, 5]);
@@ -2938,8 +2968,17 @@ mod tests {
     }
 
     #[test]
+    fn test_extend_front_wrapping() {
+        let mut tester: ArrayDeque<[usize; 3], Wrapping> = ArrayDeque::new();
+        tester.extend_front(vec![1, 2, 3]);
+        assert_eq!(tester, vec![3, 2, 1].into());
+        tester.extend_front(vec![4, 5]);
+        assert_eq!(tester, vec![5, 4, 3].into());
+    }
+
+    #[test]
     fn test_extend_back_wrapping() {
-        let mut tester: ArrayDeque<[usize; 4], Wrapping> = ArrayDeque::new();
+        let mut tester: ArrayDeque<[usize; 3], Wrapping> = ArrayDeque::new();
         tester.extend_back(vec![1, 2, 3]);
         assert_eq!(tester, vec![1, 2, 3].into());
         tester.extend_back(vec![4, 5]);
