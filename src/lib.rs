@@ -41,47 +41,13 @@
 //! arraydeque = { version = "0.3", default-features = false }
 //! ```
 //!
-//! # Capacity
-//!
-//! Note that the `capacity()` is always `backend_array.len() - 1`.
-//! [Read more](https://en.wikipedia.org/wiki/Circular_buffer)
-//!
 //! # Behaviors
 //!
-//! `ArrayDeque` provides two different behaviors of pushing element when it's full,
-//! `Saturating` and `Wrapping`.
-//! The behavior is indicated by a marker type parameter of `ArrayDeque`,
-//! which defaults to `Saturating`.
-//!
-//! ## Saturating
-//!
-//! Pushing any element when `ArrayDeque` is full will directly return an `Err(CapacityError)`
-//! containing the element attempting to push, leaving the `ArrayDeque` unchanged.
-//!
-//! ```
-//! use arraydeque::{ArrayDeque, Saturating, CapacityError};
-//!
-//! let mut tester: ArrayDeque<[_; 2], Saturating> = ArrayDeque::new();
-//!
-//! assert_eq!(tester.push_back(1), Ok(()));
-//! assert_eq!(tester.push_back(2), Ok(()));
-//! assert_eq!(tester.push_back(3), Err(CapacityError { element: 3 }));
-//! ```
-//!
-//! ## Wrapping
-//!
-//! Pushing any element when `ArrayDeque` is full will pop an element at
-//! the other side to spare room.
-//!
-//! ```
-//! use arraydeque::{ArrayDeque, Wrapping};
-//!
-//! let mut tester: ArrayDeque<[_; 2], Wrapping> = ArrayDeque::new();
-//!
-//! assert_eq!(tester.push_back(1), None);
-//! assert_eq!(tester.push_back(2), None);
-//! assert_eq!(tester.push_back(3), Some(1));
-//! ```
+//! `ArrayDeque` provides two different behaviors, `Saturating` and `Wrapping`,
+//! determining whether to remove existing element automatically when pushing 
+//! to a full deque.
+//! 
+//! See the [behavior module documentation](behavior/index.html) for more.
 
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
 #![deny(missing_docs)]
@@ -120,16 +86,8 @@ use array::Index as ArrayIndex;
 /// It can be stored directly on the stack if needed.
 ///
 /// The "default" usage of this type as a queue is to use `push_back` to add to
-/// the queue, and `pop_front` to remove from the queue. `extend` and `append`
-/// push onto the back in this manner, and iterating over `ArrayDeque` goes front
+/// the queue, and `pop_front` to remove from the queue. Iterating over `ArrayDeque` goes front
 /// to back.
-///
-/// # Capacity
-///
-/// Note that the `capacity()` is always `backed_array.len() - 1`.
-/// [Read more]
-///
-/// [Read more]: https://en.wikipedia.org/wiki/Circular_buffer
 pub struct ArrayDeque<A: Array, B: Behavior = Saturating> {
     xs: ManuallyDrop<A>,
     tail: A::Index,
@@ -1073,22 +1031,15 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
     /// Return the capacity of the `ArrayDeque`.
     ///
-    /// # Capacity
-    ///
-    /// Note that the `capacity()` is always `backed_array.len() - 1`.
-    /// [Read more]
-    ///
     /// # Examples
     ///
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[usize; 3]> = ArrayDeque::new();
+    /// let buf: ArrayDeque<[usize; 2]> = ArrayDeque::new();
     ///
-    /// assert_eq!(buf.capacity(), 3);
+    /// assert_eq!(buf.capacity(), 2);
     /// ```
-    ///
-    /// [Read more]: https://en.wikipedia.org/wiki/Circular_buffer
     #[inline]
     pub fn capacity(&self) -> usize {
         A::capacity()
