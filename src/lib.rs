@@ -44,9 +44,9 @@
 //! # Behaviors
 //!
 //! `ArrayDeque` provides two different behaviors, `Saturating` and `Wrapping`,
-//! determining whether to remove existing element automatically when pushing 
+//! determining whether to remove existing element automatically when pushing
 //! to a full deque.
-//! 
+//!
 //! See the [behavior module documentation](behavior/index.html) for more.
 
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
@@ -548,7 +548,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     fn head(&self) -> usize {
         let tail = self.tail();
         let len = self.len();
-        Self::wrap_add(tail, len)        
+        Self::wrap_add(tail, len)
     }
 
     #[inline]
@@ -579,7 +579,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     #[inline]
     unsafe fn set_tail_forward(&mut self) {
         debug_assert!(self.len() > 0);
-        
+
         let new_tail = Self::wrap_add(self.tail(), 1);
         let new_len = self.len() - 1;
         self.tail = ArrayIndex::from(new_tail);
@@ -820,7 +820,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
                     let head = self.head();
                     self.copy(idx + 1, idx, head - idx);
-                    
+
                     self.set_head_forward();
                 }
             }
@@ -2308,11 +2308,11 @@ where
         // Restore the original len value
         unsafe { source_deque.set_len(orig_len) }
         match (tail_len, head_len) {
-            (0, 0) => unsafe { 
+            (0, 0) => unsafe {
                 source_deque.set_tail(0);
-                source_deque.set_len(0); 
-            }
-            (0, _) => unsafe { 
+                source_deque.set_len(0);
+            },
+            (0, _) => unsafe {
                 source_deque.set_tail(drain_head);
                 source_deque.set_len(head_len);
             },
