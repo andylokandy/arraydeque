@@ -17,7 +17,7 @@ First, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-arraydeque = "0.3"
+arraydeque = "0.4"
 ```
 
 Next, add this to your crate root:
