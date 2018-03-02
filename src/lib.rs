@@ -63,7 +63,6 @@ use std::hash::{Hash, Hasher};
 use std::marker;
 use std::fmt;
 use std::ptr;
-use std::slice;
 use std::iter::FromIterator;
 use std::ops::Index;
 use std::ops::IndexMut;
@@ -987,12 +986,12 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
     #[inline]
     unsafe fn buffer_as_slice(&self) -> &[A::Item] {
-        slice::from_raw_parts(self.ptr(), A::capacity())
+        self.xs.as_slice()
     }
 
     #[inline]
     unsafe fn buffer_as_mut_slice(&mut self) -> &mut [A::Item] {
-        slice::from_raw_parts_mut(self.ptr_mut(), A::capacity())
+        self.xs.as_mut_slice()
     }
 
     #[inline]
