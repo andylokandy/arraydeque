@@ -985,16 +985,6 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     }
 
     #[inline]
-    unsafe fn buffer_as_slice(&self) -> &[A::Item] {
-        self.xs.as_slice()
-    }
-
-    #[inline]
-    unsafe fn buffer_as_mut_slice(&mut self) -> &mut [A::Item] {
-        self.xs.as_mut_slice()
-    }
-
-    #[inline]
     unsafe fn buffer_read(&mut self, offset: usize) -> A::Item {
         ptr::read(self.ptr().offset(offset as isize))
     }
@@ -1298,7 +1288,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         Iter {
             tail: self.tail(),
             len: self.len(),
-            ring: unsafe { self.buffer_as_slice() },
+            ring: self.xs.as_slice(),
         }
     }
 
@@ -1324,7 +1314,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         IterMut {
             tail: self.tail(),
             len: self.len(),
-            ring: unsafe { self.buffer_as_mut_slice() },
+            ring: self.xs.as_mut_slice(),
         }
     }
 
@@ -1466,7 +1456,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
             iter: Iter {
                 tail: drain_tail,
                 len: drain_len,
-                ring: unsafe { self.buffer_as_mut_slice() },
+                ring: self.xs.as_mut_slice(),
             },
         }
     }
@@ -1928,21 +1918,19 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     #[inline]
     pub fn as_mut_slices(&mut self) -> (&mut [A::Item], &mut [A::Item]) {
-        unsafe {
-            let contiguous = self.is_contiguous();
-            let head = self.head();
-            let tail = self.tail();
-            let buf = self.buffer_as_mut_slice();
+        let contiguous = self.is_contiguous();
+        let head = self.head();
+        let tail = self.tail();
+        let buf = self.xs.as_mut_slice();
 
-            if contiguous {
-                let (empty, buf) = buf.split_at_mut(0);
-                (&mut buf[tail..head], empty)
-            } else {
-                let (mid, right) = buf.split_at_mut(tail);
-                let (left, _) = mid.split_at_mut(head);
+        if contiguous {
+            let (empty, buf) = buf.split_at_mut(0);
+            (&mut buf[tail..head], empty)
+        } else {
+            let (mid, right) = buf.split_at_mut(tail);
+            let (left, _) = mid.split_at_mut(head);
 
-                (right, left)
-            }
+            (right, left)
         }
     }
 }

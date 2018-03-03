@@ -6,26 +6,32 @@ use std::slice;
 pub unsafe trait Array {
     /// The array’s element type
     type Item;
+
     #[doc(hidden)]
     /// The smallest index type that indexes the array.
     type Index: Index;
-    #[doc(hidden)]
+
+    /// Returns a raw pointer to the slice's buffer.
     fn as_ptr(&self) -> *const Self::Item;
-    #[doc(hidden)]
+
+    /// Returns an unsafe mutable pointer to the slice's buffer.
     fn as_mut_ptr(&mut self) -> *mut Self::Item;
-    #[doc(hidden)]
+
+    /// Converts the array to immutable slice
     #[inline(always)]
     fn as_slice(&self) -> &[Self::Item] {
         let ptr = self as *const _ as *const _;
         unsafe { slice::from_raw_parts(ptr, Self::capacity()) }
     }
-    #[doc(hidden)]
+
+    /// Converts the array to mutable slice
     #[inline(always)]
     fn as_mut_slice(&mut self) -> &mut [Self::Item] {
         let ptr = self as *mut _ as *mut _;
         unsafe { slice::from_raw_parts_mut(ptr, Self::capacity()) }
     }
-    #[doc(hidden)]
+
+    /// Returns number of element the array can hold
     fn capacity() -> usize;
 }
 
