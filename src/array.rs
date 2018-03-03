@@ -1,5 +1,7 @@
 //! Fixed-size arrays.
 
+use std::slice;
+
 /// Trait for fixed size arrays.
 pub unsafe trait Array {
     /// The array’s element type
@@ -11,6 +13,18 @@ pub unsafe trait Array {
     fn as_ptr(&self) -> *const Self::Item;
     #[doc(hidden)]
     fn as_mut_ptr(&mut self) -> *mut Self::Item;
+    #[doc(hidden)]
+    #[inline(always)]
+    fn as_slice(&self) -> &[Self::Item] {
+        let ptr = self as *const _ as *const _;
+        unsafe { slice::from_raw_parts(ptr, Self::capacity()) }
+    }
+    #[doc(hidden)]
+    #[inline(always)]
+    fn as_mut_slice(&mut self) -> &mut [Self::Item] {
+        let ptr = self as *mut _ as *mut _;
+        unsafe { slice::from_raw_parts_mut(ptr, Self::capacity()) }
+    }
     #[doc(hidden)]
     fn capacity() -> usize;
 }
@@ -26,7 +40,7 @@ impl Index for u8 {
     fn to_usize(self) -> usize {
         self as usize
     }
-    
+
     #[inline(always)]
     fn from(ix: usize) -> Self {
         ix as u8
