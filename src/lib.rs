@@ -516,6 +516,44 @@ where
     }
 }
 
+impl<A: Array, B: Behavior> ArrayDeque<A, B> {
+    /// Returns the first element of `self`, or `None` if it is empty.
+    pub fn first(&self) -> Option<&A::Item> {
+        let len = self.len();
+        if len == 0 {
+            return None;
+        }
+        self.get(0)
+    }
+
+    /// Returns a mutable pointer to the first element of `self`, or `None` if it is empty.
+    pub fn first_mut(&mut self) -> Option<&mut A::Item> {
+        let len = self.len();
+        if len == 0 {
+            return None;
+        }
+        self.get_mut(0)
+    }
+
+    /// Returns the last element of `self`, or `None` if it is empty.
+    pub fn last(&self) -> Option<&A::Item> {
+        let len = self.len();
+        if len == 0 {
+            return None;
+        }
+        self.get(len - 1)
+    }
+
+    /// Returns a mutable pointer to the last element of `self`, or `None` if it is empty.
+    pub fn last_mut(&mut self) -> Option<&mut A::Item> {
+        let len = self.len();
+        if len == 0 {
+            return None;
+        }
+        self.get_mut(len - 1)
+    }
+}
+
 // primitive private methods
 impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     #[inline]
@@ -2920,5 +2958,45 @@ mod tests {
         assert_eq!(tester, vec![1, 2, 3].into());
         tester.extend_back(vec![4, 5]);
         assert_eq!(tester, vec![3, 4, 5].into());
+    }
+
+    #[test]
+    fn test_first() {
+        let mut tester: ArrayDeque<[usize; 3], Wrapping> = ArrayDeque::new();
+        assert_eq!(tester.first(), None);
+        tester.extend_back(vec![1, 2]);
+        assert_eq!(tester.first(), Some(&1));
+        tester.extend_back(vec![3, 4]);
+        assert_eq!(tester.first(), Some(&2));
+    }
+
+    #[test]
+    fn test_first_mut() {
+        let mut tester: ArrayDeque<[usize; 3], Wrapping> = ArrayDeque::new();
+        assert_eq!(tester.first_mut(), None);
+        tester.extend_back(vec![1, 2]);
+        assert_eq!(tester.first_mut(), Some(&mut 1));
+        tester.extend_back(vec![3, 4]);
+        assert_eq!(tester.first_mut(), Some(&mut 2));
+    }
+
+    #[test]
+    fn test_last() {
+        let mut tester: ArrayDeque<[usize; 3], Wrapping> = ArrayDeque::new();
+        assert_eq!(tester.last(), None);
+        tester.extend_front(vec![1, 2]);
+        assert_eq!(tester.last(), Some(&1));
+        tester.extend_front(vec![3, 4]);
+        assert_eq!(tester.last(), Some(&2));
+    }
+
+    #[test]
+    fn test_last_mut() {
+        let mut tester: ArrayDeque<[usize; 3], Wrapping> = ArrayDeque::new();
+        assert_eq!(tester.last_mut(), None);
+        tester.extend_front(vec![1, 2]);
+        assert_eq!(tester.last_mut(), Some(&mut 1));
+        tester.extend_front(vec![3, 4]);
+        assert_eq!(tester.last_mut(), Some(&mut 2));
     }
 }
