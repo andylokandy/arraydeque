@@ -59,6 +59,8 @@ fn main() {
 
 ## Changelog
 
+- 0.4.3 Add support for `generic-array` under `use_generic_array` feature.
+
 - 0.4.1 Capacity now equal to backend_array.len().
 
 - 0.3.1 Add behaviors: `Saturating` and `Wrapping`.
