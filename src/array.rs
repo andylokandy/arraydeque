@@ -133,7 +133,7 @@ fix_array_impl_recursive!(u16, 256, 384, 512, 768, 1024, 2048, 4096, 8192, 16384
 #[cfg(any(target_pointer_width = "32", target_pointer_width = "64"))]
 fix_array_impl_recursive!(u32, 1 << 16,);
 
-#[cfg(feature = "generic_array")]
+#[cfg(feature = "use_generic_array")]
 mod generic_impl {
     use super::Array;
     use generic_array::{ArrayLength, GenericArray};

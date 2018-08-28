@@ -18,4 +18,4 @@ generic-array = { version = "0.11.1", optional = true }
 [features]
 default = ["std"]
 std = []
-generic_array = ["generic-array"]
+use_generic_array = ["generic-array"]

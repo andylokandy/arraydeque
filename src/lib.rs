@@ -54,7 +54,7 @@
 
 #[cfg(not(any(feature = "std", test)))]
 extern crate core as std;
-#[cfg(feature = "generic_array")]
+#[cfg(feature = "use_generic_array")]
 extern crate generic_array;
 
 use std::mem;
