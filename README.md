@@ -1,7 +1,6 @@
 # `arraydeque`
 
 [![build status](https://travis-ci.org/andylokandy/arraydeque.svg?branch=master)](https://travis-ci.org/andylokandy/arraydeque)
-[![codecov](https://codecov.io/gh/andylokandy/arraydeque/branch/master/graph/badge.svg)](https://codecov.io/gh/andylokandy/arraydeque)
 [![crates.io](https://img.shields.io/crates/v/arraydeque.svg)](https://crates.io/crates/arraydeque)
 [![docs.rs](https://docs.rs/arraydeque/badge.svg)](https://docs.rs/arraydeque)
 
@@ -58,6 +57,8 @@ fn main() {
 ```
 
 ## Changelog
+
+- 0.4.4 Fix UB: `Some(ArrayDeque::new(xs)).is_some() == false`. ([#12](https://github.com/andylokandy/arraydeque/issues/12))
 
 - 0.4.3 Add support for `generic-array` under `use_generic_array` feature.
 

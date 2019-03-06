@@ -8,8 +8,6 @@ matrix:
     - rust: stable
     - rust: beta
     - rust: nightly
-      env:
-        - NIGHTLY=1
 
 branches:
   only:
@@ -22,31 +20,3 @@ script:
       cargo build --verbose --no-default-features &&
       cargo build --release --verbose &&
       cargo build --release --verbose --no-default-features
-
-before_install:
-  - sudo apt-get update
-
-addons:
-  apt:
-    packages:
-      - libcurl4-openssl-dev
-      - libelf-dev
-      - libdw-dev
-      - cmake
-      - gcc
-      - binutils-dev
-
-after_success: |
-  wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
-  tar xzf master.tar.gz &&
-  cd kcov-master &&
-  mkdir build &&
-  cd build &&
-  cmake .. &&
-  make &&
-  sudo make install &&
-  cd ../.. &&
-  rm -rf kcov-master &&
-  for file in target/debug/arraydeque-*; do mkdir -p "target/cov/$(basename $file)"; kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
-  bash <(curl -s https://codecov.io/bash) &&
-  echo "Uploaded code coverage"
