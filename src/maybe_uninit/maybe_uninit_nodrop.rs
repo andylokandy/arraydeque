@@ -17,7 +17,7 @@ pub struct MaybeUninit<T>(NoDrop<T>);
 impl<T> MaybeUninit<T> {
     /// Create a new MaybeUninit with uninitialized interior
     pub unsafe fn uninitialized() -> Self {
-        Self(NoDrop::new(mem::uninitialized()))
+        MaybeUninit(NoDrop::new(mem::uninitialized()))
     }
 }
 
