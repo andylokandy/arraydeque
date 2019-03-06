@@ -50,6 +50,7 @@
 //! See the [behavior module documentation](behavior/index.html) for more.
 
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
+#![cfg_attr(has_union_feature, feature(untagged_unions))]
 #![deny(missing_docs)]
 
 #[cfg(not(any(feature = "std", test)))]
@@ -57,29 +58,30 @@ extern crate core as std;
 #[cfg(feature = "use_generic_array")]
 extern crate generic_array;
 
-use std::mem;
-use std::mem::ManuallyDrop;
 use std::cmp;
 use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
-use std::marker;
 use std::fmt;
-use std::ptr;
+use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
+use std::marker;
 use std::ops::Index;
 use std::ops::IndexMut;
+use std::ptr;
+
+use array::Index as ArrayIndex;
+use behavior::Behavior;
+use maybe_uninit::MaybeUninit;
 
 mod array;
-mod error;
-mod range;
 pub mod behavior;
+mod error;
+mod maybe_uninit;
+mod range;
 
 pub use array::Array;
+pub use behavior::{Saturating, Wrapping};
 pub use error::CapacityError;
 pub use range::RangeArgument;
-pub use behavior::{Saturating, Wrapping};
-use behavior::Behavior;
-use array::Index as ArrayIndex;
 
 /// A fixed capacity ring buffer.
 ///
@@ -89,7 +91,7 @@ use array::Index as ArrayIndex;
 /// the queue, and `pop_front` to remove from the queue. Iterating over `ArrayDeque` goes front
 /// to back.
 pub struct ArrayDeque<A: Array, B: Behavior = Saturating> {
-    xs: ManuallyDrop<A>,
+    xs: MaybeUninit<A>,
     tail: A::Index,
     len: A::Index,
     marker: marker::PhantomData<B>,
@@ -1011,7 +1013,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     pub fn new() -> ArrayDeque<A, B> {
         unsafe {
             ArrayDeque {
-                xs: ManuallyDrop::new(mem::uninitialized()),
+                xs: MaybeUninit::uninitialized(),
                 tail: ArrayIndex::from(0),
                 len: ArrayIndex::from(0),
                 marker: marker::PhantomData,
@@ -2023,11 +2025,7 @@ where
     }
 }
 
-impl<A: Array, B: Behavior> Eq for ArrayDeque<A, B>
-where
-    A::Item: Eq,
-{
-}
+impl<A: Array, B: Behavior> Eq for ArrayDeque<A, B> where A::Item: Eq {}
 
 impl<A: Array, B: Behavior> PartialOrd for ArrayDeque<A, B>
 where
@@ -2072,8 +2070,7 @@ impl<A: Array, B: Behavior> Index<usize> for ArrayDeque<A, B> {
                     "index out of bounds: the len is {} but the index is {}",
                     len, index
                 )
-            })
-            .unwrap()
+            }).unwrap()
     }
 }
 
@@ -2087,8 +2084,7 @@ impl<A: Array, B: Behavior> IndexMut<usize> for ArrayDeque<A, B> {
                     "index out of bounds: the len is {} but the index is {}",
                     len, index
                 )
-            })
-            .unwrap()
+            }).unwrap()
     }
 }
 
@@ -2357,8 +2353,7 @@ where
     A: Array,
     A::Item: 'a,
     B: Behavior,
-{
-}
+{}
 
 #[cfg(test)]
 mod tests {
@@ -2368,7 +2363,7 @@ mod tests {
     #[test]
     fn test_simple() {
         macro_rules! test {
-            ($behavior:ident) => ({
+            ($behavior:ident) => {{
                 let mut tester: ArrayDeque<[_; 7], $behavior> = ArrayDeque::new();
                 assert_eq!(tester.capacity(), 7);
                 assert_eq!(tester.len(), 0);
@@ -2384,7 +2379,7 @@ mod tests {
                 assert_eq!(tester.pop_front(), Some(3));
                 assert_eq!(tester.pop_front(), Some(4));
                 assert_eq!(tester.pop_front(), None);
-            })
+            }};
         }
 
         test!(Saturating);
@@ -2394,7 +2389,7 @@ mod tests {
     #[test]
     fn test_simple_reversely() {
         macro_rules! test {
-            ($behavior:ident) => ({
+            ($behavior:ident) => {{
                 let mut tester: ArrayDeque<[_; 7], $behavior> = ArrayDeque::new();
                 assert_eq!(tester.capacity(), 7);
                 assert_eq!(tester.len(), 0);
@@ -2410,7 +2405,7 @@ mod tests {
                 assert_eq!(tester.pop_back(), Some(3));
                 assert_eq!(tester.pop_back(), Some(4));
                 assert_eq!(tester.pop_back(), None);
-            })
+            }};
         }
 
         test!(Saturating);
@@ -2833,6 +2828,12 @@ mod tests {
         let tester: ArrayDeque<[_; 16]> = (0..16).into_iter().collect();
         let cloned = tester.clone();
         assert_eq!(tester, cloned)
+    }
+
+    #[test]
+    fn test_option_encoding() {
+        let tester: ArrayDeque<[Box<()>; 100]> = ArrayDeque::new();
+        assert!(Some(tester).is_some());
     }
 
     #[test]

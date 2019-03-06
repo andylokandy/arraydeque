@@ -1,6 +1,6 @@
-use std::fmt;
 #[cfg(feature = "std")]
 use std::error::Error;
+use std::fmt;
 
 /// Error value indicating insufficient capacity
 ///
