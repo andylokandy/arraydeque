@@ -16,6 +16,10 @@
 //!   - Optional, enabled by default
 //!   - Conversions between `ArrayDeque` and `Vec`
 //!   - Use libstd
+//! 
+//! - `use_generic_array`
+//!   - Optional
+//!   - Allow to use `GenericArray`
 //!
 //! # Usage
 //!
