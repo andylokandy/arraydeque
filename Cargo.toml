@@ -13,7 +13,7 @@ keywords = ["ring", "circular", "stack", "deque", "array"]
 categories = ["no-std", "data-structures", "memory-management"]
 
 [dependencies]
-generic-array = { version = "0.11.1", optional = true }
+generic-array = { version = "0.12", optional = true }
 
 [features]
 default = ["std"]
