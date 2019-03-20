@@ -58,6 +58,8 @@ fn main() {
 
 ## Changelog
 
+- 0.4.5 Update `generic-array` to `0.12`.
+
 - 0.4.4 Fix UB: `Some(ArrayDeque::new(xs)).is_some() == false`. ([#12](https://github.com/andylokandy/arraydeque/issues/12))
 
 - 0.4.3 Add support for `generic-array` under `use_generic_array` feature.

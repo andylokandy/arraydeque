@@ -1,6 +1,6 @@
 [package]
 name = "arraydeque"
-version = "0.4.4"
+version = "0.4.5"
 authors = ["andylokandy"]
 license = "MIT/Apache-2.0"
 
