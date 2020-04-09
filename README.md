@@ -72,7 +72,7 @@ fn main() {
 
 All kinds of contribution are welcomed.
 
-- **Issus.** Feel free to open an issue when you find typos, bugs, or have any question.
+- **Issues.** Feel free to open an issue when you find typos, bugs, or have any question.
 - **Pull requests**. New collection, better implementation, more tests, more documents and typo fixes are all welcomed.
 
 ## License
