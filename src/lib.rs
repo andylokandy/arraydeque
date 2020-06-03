@@ -1326,6 +1326,61 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         }
     }
 
+    /// Make the buffer contiguous
+    ///
+    /// The linearization may be required when interacting with external
+    /// interfaces requiring contiguous slices.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// let mut buf: ArrayDeque<[usize; 10]> = ArrayDeque::new();
+    /// buf.extend_back(vec![1, 2, 3]);
+    /// buf.extend_front(vec![-1, -2, -3]);
+    ///
+    /// buf.linearize();
+    ///
+    /// assert_eq!(buf.as_slices().1.len(), 0);
+    /// ```
+    ///
+    /// # Complexity
+    ///
+    /// Takes `O(len())` time and no extra space.
+    pub fn linearize(&mut self) {
+        if self.is_contiguous() {
+            return;
+        }
+
+        let tail = self.tail();
+        let len = self.len();
+        let mut new_tail = tail;
+        let mut dst : usize = 0;
+
+        while dst < len {
+            let mut src = new_tail;
+
+            while src < A::capacity() && dst < len {
+                if dst == new_tail {
+                    new_tail = src;
+                }
+
+                unsafe {
+                    ptr::swap(
+                        self.ptr_mut().offset(dst as isize),
+                        self.ptr_mut().offset(src as isize),
+                    );
+                }
+
+                dst = dst + 1;
+                src = src + 1;
+            }
+        }
+
+        unsafe { self.set_tail(0); }
+    }
+
     /// Removes the first element and returns it, or `None` if the sequence is
     /// empty.
     ///
@@ -2867,6 +2922,73 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_linearize() {
+        let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
+        tester.extend_back(vec![1, 2, 3]);
+        tester.extend_front(vec![-1, -2]);
+        assert_eq!(tester, vec![-2, -1, 1, 2, 3].into());
+        tester.linearize();
+        assert_eq!(tester, vec![-2, -1, 1, 2, 3].into());
+        assert_eq!(tester.as_slices().1.len(), 0);
+
+        let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
+        tester.extend_back(vec![1, 2]);
+        tester.extend_front(vec![-1, -2, -3]);
+        assert_eq!(tester, vec![-3, -2, -1, 1, 2].into());
+        tester.linearize();
+        assert_eq!(tester, vec![-3, -2, -1, 1, 2].into());
+        assert_eq!(tester.as_slices().1.len(), 0);
+
+        let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
+        tester.extend_back(vec![1, 2, 3]);
+        tester.extend_front(vec![-1, -2, -3]);
+        assert_eq!(tester, vec![-3, -2, -1, 1, 2, 3].into());
+        tester.linearize();
+        assert_eq!(tester, vec![-3, -2, -1, 1, 2, 3].into());
+        assert_eq!(tester.as_slices().1.len(), 0);
+
+        let mut tester: ArrayDeque<[isize; 5], Saturating> = ArrayDeque::new();
+        tester.extend_back(vec![1, 2, 3]);
+        tester.extend_front(vec![-1, -2]);
+        assert_eq!(tester, vec![-2, -1, 1, 2, 3].into());
+        tester.linearize();
+        assert_eq!(tester, vec![-2, -1, 1, 2, 3].into());
+        assert_eq!(tester.as_slices().1.len(), 0);
+
+        let mut tester: ArrayDeque<[isize; 5], Saturating> = ArrayDeque::new();
+        tester.extend_back(vec![1, 2]);
+        tester.extend_front(vec![-1, -2, -3]);
+        assert_eq!(tester, vec![-3, -2, -1, 1, 2].into());
+        tester.linearize();
+        assert_eq!(tester, vec![-3, -2, -1, 1, 2].into());
+        assert_eq!(tester.as_slices().1.len(), 0);
+
+        let mut tester: ArrayDeque<[isize; 6], Saturating> = ArrayDeque::new();
+        tester.extend_back(vec![1, 2, 3]);
+        tester.extend_front(vec![-1, -2, -3]);
+        assert_eq!(tester, vec![-3, -2, -1, 1, 2, 3].into());
+        tester.linearize();
+        assert_eq!(tester, vec![-3, -2, -1, 1, 2, 3].into());
+        assert_eq!(tester.as_slices().1.len(), 0);
+
+        let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
+        tester.extend_back(vec![1, 2, 3, 4, 5]);
+        tester.extend_front(vec![-1]);
+        assert_eq!(tester, vec![-1, 1, 2, 3, 4, 5].into());
+        tester.linearize();
+        assert_eq!(tester, vec![-1, 1, 2, 3, 4, 5].into());
+        assert_eq!(tester.as_slices().1.len(), 0);
+
+        let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
+        tester.extend_back(vec![1]);
+        tester.extend_front(vec![-1, -2, -3, -4, -5]);
+        assert_eq!(tester, vec![-5, -4, -3, -2, -1, 1].into());
+        tester.linearize();
+        assert_eq!(tester, vec![-5, -4, -3, -2, -1, 1].into());
+        assert_eq!(tester.as_slices().1.len(), 0);
     }
 
     #[test]
