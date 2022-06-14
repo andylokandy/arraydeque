@@ -1336,7 +1336,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     /// use arraydeque::ArrayDeque;
     ///
-    /// let mut buf: ArrayDeque<[usize; 10]> = ArrayDeque::new();
+    /// let mut buf: ArrayDeque<[isize; 10]> = ArrayDeque::new();
     /// buf.extend_back(vec![1, 2, 3]);
     /// buf.extend_front(vec![-1, -2, -3]);
     ///
