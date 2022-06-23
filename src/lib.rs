@@ -1788,6 +1788,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                 }
             }
             (false, true, false) => {
+                let tail = self.tail();
                 unsafe {
                     // discontiguous, remove closer to tail, head section:
                     //
@@ -1798,7 +1799,6 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                     //      [o o o o o o o o o o . . . . o o]
                     //       M M M                       M M
 
-                    let tail = self.tail();
                     // draw in elements up to idx
                     self.copy(1, 0, idx);
 
@@ -1852,7 +1852,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         let other_len = len - at;
         let mut other = Self::new();
 
-        unsafe {
+        
             let (first_half, second_half) = self.as_slices();
 
             let first_len = first_half.len();
@@ -1860,7 +1860,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
             if at < first_len {
                 // `at` lies in the first half.
                 let amount_in_first = first_len - at;
-
+                unsafe {
                 ptr::copy_nonoverlapping(
                     first_half.as_ptr().offset(at as isize),
                     other.ptr_mut(),
@@ -1872,19 +1872,20 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                     second_half.as_ptr(),
                     other.ptr_mut().offset(amount_in_first as isize),
                     second_len,
-                );
+                );}
             } else {
                 // `at` lies in the second half, need to factor in the elements we skipped
                 // in the first half.
                 let offset = at - first_len;
                 let amount_in_second = second_len - offset;
+                unsafe {
                 ptr::copy_nonoverlapping(
                     second_half.as_ptr().offset(offset as isize),
                     other.ptr_mut(),
                     amount_in_second,
-                );
+                );}
             }
-        }
+        
 
         // Cleanup where the ends of the buffers are
         unsafe {
@@ -1954,10 +1955,10 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     #[inline]
     pub fn as_slices(&self) -> (&[A::Item], &[A::Item]) {
-        unsafe {
-            let (first, second) = (*(self as *const Self as *mut Self)).as_mut_slices();
+        
+            let (first, second) = unsafe { (*(self as *const Self as *mut Self)).as_mut_slices() };
             (first, second)
-        }
+        
     }
 
     /// Returns a pair of slices which contain, in order, the contents of the
