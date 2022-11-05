@@ -61,6 +61,7 @@ extern crate core as std;
 #[cfg(feature = "use_generic_array")]
 extern crate generic_array;
 
+use std::mem::MaybeUninit;
 use std::cmp;
 use std::cmp::Ordering;
 use std::fmt;
@@ -73,12 +74,10 @@ use std::ptr;
 
 use array::Index as ArrayIndex;
 use behavior::Behavior;
-use maybe_uninit::MaybeUninit;
 
 mod array;
 pub mod behavior;
 mod error;
-mod maybe_uninit;
 mod range;
 
 pub use array::Array;
@@ -537,12 +536,12 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
     #[inline]
     fn ptr(&self) -> *const A::Item {
-        self.xs.as_ptr()
+        self.xs.as_ptr().cast()
     }
 
     #[inline]
     fn ptr_mut(&mut self) -> *mut A::Item {
-        self.xs.as_mut_ptr()
+        self.xs.as_mut_ptr().cast()
     }
 
     #[inline]
@@ -1014,13 +1013,11 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     #[inline]
     pub fn new() -> ArrayDeque<A, B> {
-        unsafe {
-            ArrayDeque {
-                xs: MaybeUninit::uninitialized(),
-                tail: ArrayIndex::from(0),
-                len: ArrayIndex::from(0),
-                marker: marker::PhantomData,
-            }
+        ArrayDeque {
+            xs: MaybeUninit::uninit(),
+            tail: ArrayIndex::from(0),
+            len: ArrayIndex::from(0),
+            marker: marker::PhantomData,
         }
     }
 
@@ -1078,6 +1075,16 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    /// Entire capacity of the underlying storage
+    fn as_uninit_slice(&self) -> &[MaybeUninit<A::Item>] {
+        unsafe { std::slice::from_raw_parts(self.xs.as_ptr().cast(), A::capacity()) }
+    }
+
+    /// Entire capacity of the underlying storage
+    fn as_uninit_slice_mut(&mut self) -> &mut [MaybeUninit<A::Item>] {
+        unsafe { std::slice::from_raw_parts_mut(self.xs.as_mut_ptr().cast(), A::capacity()) }
     }
 
     /// Returns true if the buffer is full.
@@ -1295,7 +1302,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         Iter {
             tail: self.tail(),
             len: self.len(),
-            ring: self.xs.as_slice(),
+            ring: self.as_uninit_slice(),
         }
     }
 
@@ -1321,7 +1328,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         IterMut {
             tail: self.tail(),
             len: self.len(),
-            ring: self.xs.as_mut_slice(),
+            ring: self.as_uninit_slice_mut(),
         }
     }
 
@@ -1518,7 +1525,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
             iter: Iter {
                 tail: drain_tail,
                 len: drain_len,
-                ring: self.xs.as_mut_slice(),
+                ring: self.as_uninit_slice_mut(),
             },
         }
     }
@@ -1983,18 +1990,38 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         let contiguous = self.is_contiguous();
         let head = self.head();
         let tail = self.tail();
-        let buf = self.xs.as_mut_slice();
+        let buf = self.as_uninit_slice_mut();
 
         if contiguous {
             let (empty, buf) = buf.split_at_mut(0);
-            (&mut buf[tail..head], empty)
+            unsafe {
+                (slice_assume_init_mut(&mut buf[tail..head]), slice_assume_init_mut(empty))
+            }
         } else {
             let (mid, right) = buf.split_at_mut(tail);
             let (left, _) = mid.split_at_mut(head);
 
-            (right, left)
+            unsafe {
+                (slice_assume_init_mut(right), slice_assume_init_mut(left))
+            }
         }
     }
+}
+
+/// Copy of currently-unstable `MaybeUninit::slice_assume_init_ref`.
+pub unsafe fn slice_assume_init_ref<T>(slice: &[MaybeUninit<T>]) -> &[T] {
+   // SAFETY: casting `slice` to a `*const [T]` is safe since the caller guarantees that
+   // `slice` is initialized, and `MaybeUninit` is guaranteed to have the same layout as `T`.
+   // The pointer obtained is valid since it refers to memory owned by `slice` which is a
+   // reference and thus guaranteed to be valid for reads.
+   &*(slice as *const [MaybeUninit<T>] as *const [T])
+}
+
+/// Copy of currently-unstable `MaybeUninit::slice_assume_init_mut`.
+pub unsafe fn slice_assume_init_mut<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
+    // SAFETY: similar to safety notes for `slice_assume_init_ref`, but we have a
+    // mutable reference which is also guaranteed to be valid for writes.
+    &mut *(slice as *mut [MaybeUninit<T>] as *mut [T])
 }
 
 impl<A: Array> From<ArrayDeque<A, Wrapping>> for ArrayDeque<A, Saturating> {
@@ -2198,7 +2225,7 @@ fn wrap_sub(index: usize, subtrahend: usize, capacity: usize) -> usize {
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 #[derive(Clone)]
 pub struct Iter<'a, T: 'a> {
-    ring: &'a [T],
+    ring: &'a [MaybeUninit<T>],
     tail: usize,
     len: usize,
 }
@@ -2214,7 +2241,7 @@ impl<'a, T> Iterator for Iter<'a, T> {
         let tail = self.tail;
         self.tail = wrap_add(self.tail, 1, self.ring.len());
         self.len -= 1;
-        unsafe { Some(self.ring.get_unchecked(tail)) }
+        unsafe { Some(self.ring.get_unchecked(tail).assume_init_ref()) }
     }
 
     #[inline]
@@ -2231,7 +2258,7 @@ impl<'a, T> DoubleEndedIterator for Iter<'a, T> {
         }
         self.len -= 1;
         let head = wrap_add(self.tail, self.len, self.ring.len());
-        unsafe { Some(self.ring.get_unchecked(head)) }
+        unsafe { Some(self.ring.get_unchecked(head).assume_init_ref()) }
     }
 }
 
@@ -2240,7 +2267,7 @@ impl<'a, T> ExactSizeIterator for Iter<'a, T> {}
 /// `ArrayDeque` mutable iterator
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 pub struct IterMut<'a, T: 'a> {
-    ring: &'a mut [T],
+    ring: &'a mut [MaybeUninit<T>],
     tail: usize,
     len: usize,
 }
@@ -2257,8 +2284,8 @@ impl<'a, T> Iterator for IterMut<'a, T> {
         self.tail = wrap_add(self.tail, 1, self.ring.len());
         self.len -= 1;
         unsafe {
-            let elem = self.ring.get_unchecked_mut(tail);
-            Some(&mut *(elem as *mut _))
+            let elem = self.ring.get_unchecked_mut(tail).assume_init_mut();
+            Some(std::mem::transmute::<&mut T, &'a mut T>(elem))
         }
     }
 
@@ -2277,8 +2304,8 @@ impl<'a, T> DoubleEndedIterator for IterMut<'a, T> {
         self.len -= 1;
         let head = wrap_add(self.tail, self.len, self.ring.len());
         unsafe {
-            let elem = self.ring.get_unchecked_mut(head);
-            Some(&mut *(elem as *mut _))
+            let elem = self.ring.get_unchecked_mut(head).assume_init_mut();
+            Some(std::mem::transmute::<&mut T, &'a mut T>(elem))
         }
     }
 }
