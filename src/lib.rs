@@ -208,6 +208,8 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// assert_eq!(overflow, Err(CapacityError { element: 4 }));
     /// assert_eq!(buf.back(), Some(&3));
     /// ```
+    #[track_caller]
+    #[inline]
     pub fn insert(&mut self, index: usize, element: A::Item) -> Result<(), CapacityError<A::Item>> {
         assert!(index <= self.len(), "index out of bounds");
 
@@ -1504,6 +1506,8 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.drain(..);
     /// assert!(buf.is_empty());
     /// ```
+    #[track_caller]
+    #[inline]
     pub fn drain<R>(&mut self, range: R) -> Drain<A, B>
     where
         R: RangeArgument<usize>,
@@ -1555,6 +1559,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     ///
     /// assert_eq!(buf, vec![2, 1, 0].into());
     /// ```
+    #[track_caller]
     #[inline]
     pub fn swap(&mut self, i: usize, j: usize) {
         assert!(i < self.len());
@@ -1853,6 +1858,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// assert_eq!(buf.len(), 1);
     /// assert_eq!(buf2.len(), 2);
     /// ```
+    #[track_caller]
     #[inline]
     pub fn split_off(&mut self, at: usize) -> Self {
         let len = self.len();
