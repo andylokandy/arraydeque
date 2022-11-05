@@ -54,7 +54,6 @@
 //! See the [behavior module documentation](behavior/index.html) for more.
 
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
-#![cfg_attr(has_union_feature, feature(untagged_unions))]
 #![deny(missing_docs)]
 
 #[cfg(not(any(feature = "std", test)))]
