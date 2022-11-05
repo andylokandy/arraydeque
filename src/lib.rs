@@ -857,9 +857,10 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
             len,
             A::capacity()
         );
+        let xs = self.ptr_mut();
         ptr::copy(
-            self.ptr_mut().offset(src as isize),
-            self.ptr_mut().offset(dst as isize),
+            xs.add(src),
+            xs.add(dst),
             len,
         );
     }
@@ -992,12 +993,12 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
     #[inline]
     unsafe fn buffer_read(&mut self, offset: usize) -> A::Item {
-        ptr::read(self.ptr().offset(offset as isize))
+        ptr::read(self.ptr().add(offset))
     }
 
     #[inline]
     unsafe fn buffer_write(&mut self, offset: usize, element: A::Item) {
-        ptr::write(self.ptr_mut().offset(offset as isize), element);
+        ptr::write(self.ptr_mut().add(offset), element);
     }
 }
 
@@ -1247,7 +1248,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     pub fn get(&self, index: usize) -> Option<&A::Item> {
         if index < self.len() {
             let idx = Self::wrap_add(self.tail(), index);
-            unsafe { Some(&*self.ptr().offset(idx as isize)) }
+            unsafe { Some(&*self.ptr().add(idx)) }
         } else {
             None
         }
@@ -1274,7 +1275,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     pub fn get_mut(&mut self, index: usize) -> Option<&mut A::Item> {
         if index < self.len() {
             let idx = Self::wrap_add(self.tail(), index);
-            unsafe { Some(&mut *self.ptr_mut().offset(idx as isize)) }
+            unsafe { Some(&mut *self.ptr_mut().add(idx)) }
         } else {
             None
         }
@@ -1372,10 +1373,11 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                     new_tail = src;
                 }
 
+                let xs = self.ptr_mut();
                 unsafe {
                     ptr::swap(
-                        self.ptr_mut().offset(dst as isize),
-                        self.ptr_mut().offset(src as isize),
+                        xs.add(dst),
+                        xs.add(src),
                     );
                 }
 
@@ -1559,10 +1561,11 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         assert!(j < self.len());
         let ri = Self::wrap_add(self.tail(), i);
         let rj = Self::wrap_add(self.tail(), j);
+        let xs = self.ptr_mut();
         unsafe {
             ptr::swap(
-                self.ptr_mut().offset(ri as isize),
-                self.ptr_mut().offset(rj as isize),
+                xs.add(ri),
+                xs.add(rj),
             )
         }
     }
@@ -1868,7 +1871,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                 let amount_in_first = first_len - at;
 
                 ptr::copy_nonoverlapping(
-                    first_half.as_ptr().offset(at as isize),
+                    first_half.as_ptr().add(at),
                     other.ptr_mut(),
                     amount_in_first,
                 );
@@ -1876,7 +1879,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                 // just take all of the second half.
                 ptr::copy_nonoverlapping(
                     second_half.as_ptr(),
-                    other.ptr_mut().offset(amount_in_first as isize),
+                    other.ptr_mut().add(amount_in_first),
                     second_len,
                 );
             } else {
@@ -1885,7 +1888,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                 let offset = at - first_len;
                 let amount_in_second = second_len - offset;
                 ptr::copy_nonoverlapping(
-                    second_half.as_ptr().offset(offset as isize),
+                    second_half.as_ptr().add(offset),
                     other.ptr_mut(),
                     amount_in_second,
                 );
@@ -1960,9 +1963,23 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     #[inline]
     pub fn as_slices(&self) -> (&[A::Item], &[A::Item]) {
-        unsafe {
-            let (first, second) = (*(self as *const Self as *mut Self)).as_mut_slices();
-            (first, second)
+        let contiguous = self.is_contiguous();
+        let head = self.head();
+        let tail = self.tail();
+        let buf = self.as_uninit_slice();
+
+        if contiguous {
+            let (empty, buf) = buf.split_at(0);
+            unsafe {
+                (slice_assume_init_ref(&buf[tail..head]), slice_assume_init_ref(empty))
+            }
+        } else {
+            let (mid, right) = buf.split_at(tail);
+            let (left, _) = mid.split_at(head);
+
+            unsafe {
+                (slice_assume_init_ref(right), slice_assume_init_ref(left))
+            }
         }
     }
 
