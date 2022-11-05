@@ -240,16 +240,16 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     ///
     /// let mut buf: ArrayDeque<[_; 7]> = ArrayDeque::new();
     ///
-    /// buf.extend_front(vec![9, 8, 7].into_iter());
-    /// buf.extend_front(vec![6, 5, 4].into_iter());
+    /// buf.extend_front([9, 8, 7].into_iter());
+    /// buf.extend_front([6, 5, 4].into_iter());
     ///
     /// assert_eq!(buf.len(), 6);
     ///
     /// // max capacity reached
-    /// buf.extend_front(vec![3, 2, 1].into_iter());
+    /// buf.extend_front([3, 2, 1].into_iter());
     ///
     /// assert_eq!(buf.len(), 7);
-    /// assert_eq!(buf, vec![3, 4, 5, 6, 7, 8, 9].into());
+    /// assert_eq!(buf, [3, 4, 5, 6, 7, 8, 9].into());
     /// ```
     #[allow(unused_must_use)]
     pub fn extend_front<I>(&mut self, iter: I)
@@ -278,16 +278,16 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     ///
     /// let mut buf: ArrayDeque<[_; 7]> = ArrayDeque::new();
     ///
-    /// buf.extend_back(vec![1, 2, 3].into_iter());
-    /// buf.extend_back(vec![4, 5, 6].into_iter());
+    /// buf.extend_back([1, 2, 3].into_iter());
+    /// buf.extend_back([4, 5, 6].into_iter());
     ///
     /// assert_eq!(buf.len(), 6);
     ///
     /// // max capacity reached
-    /// buf.extend_back(vec![7, 8, 9].into_iter());
+    /// buf.extend_back([7, 8, 9].into_iter());
     ///
     /// assert_eq!(buf.len(), 7);
-    /// assert_eq!(buf, vec![1, 2, 3, 4, 5, 6, 7].into());
+    /// assert_eq!(buf, [1, 2, 3, 4, 5, 6, 7].into());
     /// ```
     #[allow(unused_must_use)]
     pub fn extend_back<I>(&mut self, iter: I)
@@ -435,16 +435,16 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     ///
     /// let mut buf: ArrayDeque<[_; 7], Wrapping> = ArrayDeque::new();
     ///
-    /// buf.extend_front(vec![9, 8, 7].into_iter());
-    /// buf.extend_front(vec![6, 5, 4].into_iter());
+    /// buf.extend_front([9, 8, 7].into_iter());
+    /// buf.extend_front([6, 5, 4].into_iter());
     ///
     /// assert_eq!(buf.len(), 6);
     ///
     /// // max capacity reached
-    /// buf.extend_front(vec![3, 2, 1].into_iter());
+    /// buf.extend_front([3, 2, 1].into_iter());
     ///
     /// assert_eq!(buf.len(), 7);
-    /// assert_eq!(buf, vec![1, 2, 3, 4, 5, 6, 7].into());
+    /// assert_eq!(buf, [1, 2, 3, 4, 5, 6, 7].into());
     /// ```
     pub fn extend_front<I>(&mut self, iter: I)
     where
@@ -470,16 +470,16 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     ///
     /// let mut buf: ArrayDeque<[_; 7], Wrapping> = ArrayDeque::new();
     ///
-    /// buf.extend_back(vec![1, 2, 3].into_iter());
-    /// buf.extend_back(vec![4, 5, 6].into_iter());
+    /// buf.extend_back([1, 2, 3].into_iter());
+    /// buf.extend_back([4, 5, 6].into_iter());
     ///
     /// assert_eq!(buf.len(), 6);
     ///
     /// // max capacity reached
-    /// buf.extend_back(vec![7, 8, 9].into_iter());
+    /// buf.extend_back([7, 8, 9].into_iter());
     ///
     /// assert_eq!(buf.len(), 7);
-    /// assert_eq!(buf, vec![3, 4, 5, 6, 7, 8, 9].into());
+    /// assert_eq!(buf, [3, 4, 5, 6, 7, 8, 9].into());
     /// ```
     pub fn extend_back<I>(&mut self, iter: I)
     where
@@ -1296,7 +1296,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.push_back(1);
     /// buf.push_back(2);
     ///
-    /// let expected = vec![0, 1, 2];
+    /// let expected = [0, 1, 2];
     ///
     /// assert!(buf.iter().eq(expected.iter()));
     /// ```
@@ -1322,7 +1322,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.push_back(1);
     /// buf.push_back(2);
     ///
-    /// let mut expected = vec![0, 1, 2];
+    /// let mut expected = [0, 1, 2];
     ///
     /// assert!(buf.iter_mut().eq(expected.iter_mut()));
     /// ```
@@ -1346,8 +1346,8 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// use arraydeque::ArrayDeque;
     ///
     /// let mut buf: ArrayDeque<[isize; 10]> = ArrayDeque::new();
-    /// buf.extend_back(vec![1, 2, 3]);
-    /// buf.extend_front(vec![-1, -2, -3]);
+    /// buf.extend_back([1, 2, 3]);
+    /// buf.extend_front([-1, -2, -3]);
     ///
     /// buf.linearize();
     ///
@@ -1494,12 +1494,12 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     ///
     /// {
     ///     let drain = buf.drain(2..);
-    ///     assert!(vec![2].into_iter().eq(drain));
+    ///     assert!([2].into_iter().eq(drain));
     /// }
     ///
     /// {
     ///     let iter = buf.iter();
-    ///     assert!(vec![0, 1].iter().eq(iter));
+    ///     assert!([0, 1].iter().eq(iter));
     /// }
     ///
     /// // A full range clears all contents
@@ -1557,7 +1557,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     ///
     /// buf.swap(0, 2);
     ///
-    /// assert_eq!(buf, vec![2, 1, 0].into());
+    /// assert_eq!(buf, [2, 1, 0].into());
     /// ```
     #[track_caller]
     #[inline]
@@ -1597,7 +1597,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.push_back(2);
     ///
     /// assert_eq!(buf.swap_remove_back(0), Some(0));
-    /// assert_eq!(buf, vec![2, 1].into());
+    /// assert_eq!(buf, [2, 1].into());
     /// ```
     pub fn swap_remove_back(&mut self, index: usize) -> Option<A::Item> {
         let length = self.len();
@@ -1631,7 +1631,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.push_back(2);
     ///
     /// assert_eq!(buf.swap_remove_front(2), Some(2));
-    /// assert_eq!(buf, vec![1, 0].into());
+    /// assert_eq!(buf, [1, 0].into());
     /// ```
     pub fn swap_remove_front(&mut self, index: usize) -> Option<A::Item> {
         let length = self.len();
@@ -1662,7 +1662,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.push_back(2);
     ///
     /// assert_eq!(buf.remove(1), Some(1));
-    /// assert_eq!(buf, vec![0, 2].into());
+    /// assert_eq!(buf, [0, 2].into());
     /// ```
     pub fn remove(&mut self, index: usize) -> Option<A::Item> {
         if self.is_empty() || self.len() <= index {
@@ -1926,7 +1926,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.extend_back(0..4);
     /// buf.retain(|&x| x % 2 == 0);
     ///
-    /// assert_eq!(buf, vec![0, 2].into());
+    /// assert_eq!(buf, [0, 2].into());
     /// ```
     pub fn retain<F>(&mut self, mut f: F)
     where
@@ -2066,6 +2066,15 @@ where
 {
     fn from(vec: Vec<A::Item>) -> Self {
         vec.into_iter().collect()
+    }
+}
+
+impl<A: Array, B: Behavior, const N: usize> From<[A::Item; N]> for ArrayDeque<A, B>
+where
+    Self: FromIterator<A::Item>,
+{
+    fn from(arr: [A::Item; N]) -> Self {
+        arr.into_iter().collect()
     }
 }
 
@@ -2681,6 +2690,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn test_drain() {
         const CAP: usize = 8;
         let mut tester: ArrayDeque<[_; CAP]> = ArrayDeque::new();
@@ -2976,127 +2986,127 @@ mod tests {
     #[test]
     fn test_linearize() {
         let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3]);
-        tester.extend_front(vec![-1, -2]);
-        assert_eq!(tester, vec![-2, -1, 1, 2, 3].into());
+        tester.extend_back([1, 2, 3]);
+        tester.extend_front([-1, -2]);
+        assert_eq!(tester, [-2, -1, 1, 2, 3].into());
         tester.linearize();
-        assert_eq!(tester, vec![-2, -1, 1, 2, 3].into());
+        assert_eq!(tester, [-2, -1, 1, 2, 3].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2]);
-        tester.extend_front(vec![-1, -2, -3]);
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2].into());
+        tester.extend_back([1, 2]);
+        tester.extend_front([-1, -2, -3]);
+        assert_eq!(tester, [-3, -2, -1, 1, 2].into());
         tester.linearize();
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2].into());
+        assert_eq!(tester, [-3, -2, -1, 1, 2].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3]);
-        tester.extend_front(vec![-1, -2, -3]);
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2, 3].into());
+        tester.extend_back([1, 2, 3]);
+        tester.extend_front([-1, -2, -3]);
+        assert_eq!(tester, [-3, -2, -1, 1, 2, 3].into());
         tester.linearize();
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2, 3].into());
+        assert_eq!(tester, [-3, -2, -1, 1, 2, 3].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 5], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3]);
-        tester.extend_front(vec![-1, -2]);
-        assert_eq!(tester, vec![-2, -1, 1, 2, 3].into());
+        tester.extend_back([1, 2, 3]);
+        tester.extend_front([-1, -2]);
+        assert_eq!(tester, [-2, -1, 1, 2, 3].into());
         tester.linearize();
-        assert_eq!(tester, vec![-2, -1, 1, 2, 3].into());
+        assert_eq!(tester, [-2, -1, 1, 2, 3].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 5], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2]);
-        tester.extend_front(vec![-1, -2, -3]);
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2].into());
+        tester.extend_back([1, 2]);
+        tester.extend_front([-1, -2, -3]);
+        assert_eq!(tester, [-3, -2, -1, 1, 2].into());
         tester.linearize();
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2].into());
+        assert_eq!(tester, [-3, -2, -1, 1, 2].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 6], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3]);
-        tester.extend_front(vec![-1, -2, -3]);
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2, 3].into());
+        tester.extend_back([1, 2, 3]);
+        tester.extend_front([-1, -2, -3]);
+        assert_eq!(tester, [-3, -2, -1, 1, 2, 3].into());
         tester.linearize();
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2, 3].into());
+        assert_eq!(tester, [-3, -2, -1, 1, 2, 3].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3, 4, 5]);
-        tester.extend_front(vec![-1]);
-        assert_eq!(tester, vec![-1, 1, 2, 3, 4, 5].into());
+        tester.extend_back([1, 2, 3, 4, 5]);
+        tester.extend_front([-1]);
+        assert_eq!(tester, [-1, 1, 2, 3, 4, 5].into());
         tester.linearize();
-        assert_eq!(tester, vec![-1, 1, 2, 3, 4, 5].into());
+        assert_eq!(tester, [-1, 1, 2, 3, 4, 5].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1]);
-        tester.extend_front(vec![-1, -2, -3, -4, -5]);
-        assert_eq!(tester, vec![-5, -4, -3, -2, -1, 1].into());
+        tester.extend_back([1]);
+        tester.extend_front([-1, -2, -3, -4, -5]);
+        assert_eq!(tester, [-5, -4, -3, -2, -1, 1].into());
         tester.linearize();
-        assert_eq!(tester, vec![-5, -4, -3, -2, -1, 1].into());
+        assert_eq!(tester, [-5, -4, -3, -2, -1, 1].into());
         assert_eq!(tester.as_slices().1.len(), 0);
     }
 
     #[test]
     fn test_from_iterator_saturating() {
         assert_eq!(
-            ArrayDeque::<[_; 3], Saturating>::from_iter(vec![1, 2, 3]),
-            vec![1, 2, 3].into()
+            ArrayDeque::<[_; 3], Saturating>::from_iter([1, 2, 3]),
+            [1, 2, 3].into()
         );
         assert_eq!(
-            ArrayDeque::<[_; 3], Saturating>::from_iter(vec![1, 2, 3, 4, 5]),
-            vec![1, 2, 3].into()
+            ArrayDeque::<[_; 3], Saturating>::from_iter([1, 2, 3, 4, 5]),
+            [1, 2, 3].into()
         );
     }
 
     #[test]
     fn test_from_iterator_wrapping() {
         assert_eq!(
-            ArrayDeque::<[_; 3], Wrapping>::from_iter(vec![1, 2, 3]),
-            vec![1, 2, 3].into()
+            ArrayDeque::<[_; 3], Wrapping>::from_iter([1, 2, 3]),
+            [1, 2, 3].into()
         );
         assert_eq!(
-            ArrayDeque::<[_; 3], Wrapping>::from_iter(vec![1, 2, 3, 4, 5]),
-            vec![3, 4, 5].into()
+            ArrayDeque::<[_; 3], Wrapping>::from_iter([1, 2, 3, 4, 5]),
+            [3, 4, 5].into()
         );
     }
 
     #[test]
     fn test_extend_front_saturating() {
         let mut tester: ArrayDeque<[usize; 3], Saturating> = ArrayDeque::new();
-        tester.extend_front(vec![1, 2, 3]);
-        assert_eq!(tester, vec![3, 2, 1].into());
-        tester.extend_front(vec![4, 5]);
-        assert_eq!(tester, vec![3, 2, 1].into());
+        tester.extend_front([1, 2, 3]);
+        assert_eq!(tester, [3, 2, 1].into());
+        tester.extend_front([4, 5]);
+        assert_eq!(tester, [3, 2, 1].into());
     }
 
     #[test]
     fn test_extend_back_saturating() {
         let mut tester: ArrayDeque<[usize; 3], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3]);
-        assert_eq!(tester, vec![1, 2, 3].into());
-        tester.extend_back(vec![4, 5]);
-        assert_eq!(tester, vec![1, 2, 3].into());
+        tester.extend_back([1, 2, 3]);
+        assert_eq!(tester, [1, 2, 3].into());
+        tester.extend_back([4, 5]);
+        assert_eq!(tester, [1, 2, 3].into());
     }
 
     #[test]
     fn test_extend_front_wrapping() {
         let mut tester: ArrayDeque<[usize; 3], Wrapping> = ArrayDeque::new();
-        tester.extend_front(vec![1, 2, 3]);
-        assert_eq!(tester, vec![3, 2, 1].into());
-        tester.extend_front(vec![4, 5]);
-        assert_eq!(tester, vec![5, 4, 3].into());
+        tester.extend_front([1, 2, 3]);
+        assert_eq!(tester, [3, 2, 1].into());
+        tester.extend_front([4, 5]);
+        assert_eq!(tester, [5, 4, 3].into());
     }
 
     #[test]
     fn test_extend_back_wrapping() {
         let mut tester: ArrayDeque<[usize; 3], Wrapping> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3]);
-        assert_eq!(tester, vec![1, 2, 3].into());
-        tester.extend_back(vec![4, 5]);
-        assert_eq!(tester, vec![3, 4, 5].into());
+        tester.extend_back([1, 2, 3]);
+        assert_eq!(tester, [1, 2, 3].into());
+        tester.extend_back([4, 5]);
+        assert_eq!(tester, [3, 4, 5].into());
     }
 }
