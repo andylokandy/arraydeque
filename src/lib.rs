@@ -16,7 +16,7 @@
 //!   - Optional, enabled by default
 //!   - Conversions between `ArrayDeque` and `Vec`
 //!   - Use libstd
-//! 
+//!
 //! - `use_generic_array`
 //!   - Optional
 //!   - Allow to use `GenericArray`
@@ -1356,7 +1356,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         let tail = self.tail();
         let len = self.len();
         let mut new_tail = tail;
-        let mut dst : usize = 0;
+        let mut dst: usize = 0;
 
         while dst < len {
             let mut src = new_tail;
@@ -1378,7 +1378,9 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
             }
         }
 
-        unsafe { self.set_tail(0); }
+        unsafe {
+            self.set_tail(0);
+        }
     }
 
     /// Removes the first element and returns it, or `None` if the sequence is
@@ -2129,7 +2131,8 @@ impl<A: Array, B: Behavior> Index<usize> for ArrayDeque<A, B> {
                     "index out of bounds: the len is {} but the index is {}",
                     len, index
                 )
-            }).unwrap()
+            })
+            .unwrap()
     }
 }
 
@@ -2143,7 +2146,8 @@ impl<A: Array, B: Behavior> IndexMut<usize> for ArrayDeque<A, B> {
                     "index out of bounds: the len is {} but the index is {}",
                     len, index
                 )
-            }).unwrap()
+            })
+            .unwrap()
     }
 }
 
@@ -2412,7 +2416,8 @@ where
     A: Array,
     A::Item: 'a,
     B: Behavior,
-{}
+{
+}
 
 #[cfg(test)]
 mod tests {
