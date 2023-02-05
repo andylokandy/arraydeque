@@ -1,5 +1,5 @@
 //! A circular buffer with fixed capacity.
-//! Requires Rust 1.20+
+//! Requires Rust 1.56+
 //!
 //! It can be stored directly on the stack if needed.
 //!
@@ -16,7 +16,7 @@
 //!   - Optional, enabled by default
 //!   - Conversions between `ArrayDeque` and `Vec`
 //!   - Use libstd
-//! 
+//!
 //! - `use_generic_array`
 //!   - Optional
 //!   - Allow to use `GenericArray`
@@ -61,13 +61,13 @@ extern crate core as std;
 #[cfg(feature = "use_generic_array")]
 extern crate generic_array;
 
-use std::mem::MaybeUninit;
 use std::cmp;
 use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 use std::marker;
+use std::mem::MaybeUninit;
 use std::ops::Index;
 use std::ops::IndexMut;
 use std::ptr;
@@ -860,11 +860,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
             A::capacity()
         );
         let xs = self.ptr_mut();
-        ptr::copy(
-            xs.add(src),
-            xs.add(dst),
-            len,
-        );
+        ptr::copy(xs.add(src), xs.add(dst), len);
     }
 
     /// Copies a potentially wrapping block of memory len long from src to dest.
@@ -1365,7 +1361,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         let tail = self.tail();
         let len = self.len();
         let mut new_tail = tail;
-        let mut dst : usize = 0;
+        let mut dst: usize = 0;
 
         while dst < len {
             let mut src = new_tail;
@@ -1377,10 +1373,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
                 let xs = self.ptr_mut();
                 unsafe {
-                    ptr::swap(
-                        xs.add(dst),
-                        xs.add(src),
-                    );
+                    ptr::swap(xs.add(dst), xs.add(src));
                 }
 
                 dst = dst + 1;
@@ -1388,7 +1381,9 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
             }
         }
 
-        unsafe { self.set_tail(0); }
+        unsafe {
+            self.set_tail(0);
+        }
     }
 
     /// Removes the first element and returns it, or `None` if the sequence is
@@ -1567,12 +1562,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         let ri = Self::wrap_add(self.tail(), i);
         let rj = Self::wrap_add(self.tail(), j);
         let xs = self.ptr_mut();
-        unsafe {
-            ptr::swap(
-                xs.add(ri),
-                xs.add(rj),
-            )
-        }
+        unsafe { ptr::swap(xs.add(ri), xs.add(rj)) }
     }
 
     /// Removes an element from anywhere in the `ArrayDeque` and returns it, replacing it with the
@@ -1977,15 +1967,16 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         if contiguous {
             let (empty, buf) = buf.split_at(0);
             unsafe {
-                (slice_assume_init_ref(&buf[tail..head]), slice_assume_init_ref(empty))
+                (
+                    slice_assume_init_ref(&buf[tail..head]),
+                    slice_assume_init_ref(empty),
+                )
             }
         } else {
             let (mid, right) = buf.split_at(tail);
             let (left, _) = mid.split_at(head);
 
-            unsafe {
-                (slice_assume_init_ref(right), slice_assume_init_ref(left))
-            }
+            unsafe { (slice_assume_init_ref(right), slice_assume_init_ref(left)) }
         }
     }
 
@@ -2018,26 +2009,27 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         if contiguous {
             let (empty, buf) = buf.split_at_mut(0);
             unsafe {
-                (slice_assume_init_mut(&mut buf[tail..head]), slice_assume_init_mut(empty))
+                (
+                    slice_assume_init_mut(&mut buf[tail..head]),
+                    slice_assume_init_mut(empty),
+                )
             }
         } else {
             let (mid, right) = buf.split_at_mut(tail);
             let (left, _) = mid.split_at_mut(head);
 
-            unsafe {
-                (slice_assume_init_mut(right), slice_assume_init_mut(left))
-            }
+            unsafe { (slice_assume_init_mut(right), slice_assume_init_mut(left)) }
         }
     }
 }
 
 /// Copy of currently-unstable `MaybeUninit::slice_assume_init_ref`.
 pub unsafe fn slice_assume_init_ref<T>(slice: &[MaybeUninit<T>]) -> &[T] {
-   // SAFETY: casting `slice` to a `*const [T]` is safe since the caller guarantees that
-   // `slice` is initialized, and `MaybeUninit` is guaranteed to have the same layout as `T`.
-   // The pointer obtained is valid since it refers to memory owned by `slice` which is a
-   // reference and thus guaranteed to be valid for reads.
-   &*(slice as *const [MaybeUninit<T>] as *const [T])
+    // SAFETY: casting `slice` to a `*const [T]` is safe since the caller guarantees that
+    // `slice` is initialized, and `MaybeUninit` is guaranteed to have the same layout as `T`.
+    // The pointer obtained is valid since it refers to memory owned by `slice` which is a
+    // reference and thus guaranteed to be valid for reads.
+    &*(slice as *const [MaybeUninit<T>] as *const [T])
 }
 
 /// Copy of currently-unstable `MaybeUninit::slice_assume_init_mut`.
@@ -2187,7 +2179,8 @@ impl<A: Array, B: Behavior> Index<usize> for ArrayDeque<A, B> {
                     "index out of bounds: the len is {} but the index is {}",
                     len, index
                 )
-            }).unwrap()
+            })
+            .unwrap()
     }
 }
 
@@ -2201,7 +2194,8 @@ impl<A: Array, B: Behavior> IndexMut<usize> for ArrayDeque<A, B> {
                     "index out of bounds: the len is {} but the index is {}",
                     len, index
                 )
-            }).unwrap()
+            })
+            .unwrap()
     }
 }
 
@@ -2470,7 +2464,8 @@ where
     A: Array,
     A::Item: 'a,
     B: Behavior,
-{}
+{
+}
 
 #[cfg(test)]
 mod tests {
