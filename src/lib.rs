@@ -1,5 +1,5 @@
 //! A circular buffer with fixed capacity.
-//! Requires Rust 1.56+
+//! Requires Rust 1.59+
 //!
 //! It can be stored directly on the stack if needed.
 //!
@@ -1068,12 +1068,12 @@ impl<T, const CAP: usize, B: Behavior> ArrayDeque<T, CAP, B> {
     }
 
     /// Entire capacity of the underlying storage
-    fn as_uninit_slice(&self) -> &[MaybeUninit<T>] {
+    pub fn as_uninit_slice(&self) -> &[MaybeUninit<T>] {
         unsafe { std::slice::from_raw_parts(self.xs.as_ptr().cast(), CAP) }
     }
 
     /// Entire capacity of the underlying storage
-    fn as_uninit_slice_mut(&mut self) -> &mut [MaybeUninit<T>] {
+    pub fn as_uninit_slice_mut(&mut self) -> &mut [MaybeUninit<T>] {
         unsafe { std::slice::from_raw_parts_mut(self.xs.as_mut_ptr().cast(), CAP) }
     }
 
@@ -2242,7 +2242,6 @@ fn wrap_sub(index: usize, subtrahend: usize, capacity: usize) -> usize {
 
 /// `ArrayDeque` iterator
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
-#[derive(Clone)]
 pub struct Iter<'a, T: 'a> {
     ring: &'a [MaybeUninit<T>],
     tail: usize,
@@ -2282,6 +2281,16 @@ impl<'a, T> DoubleEndedIterator for Iter<'a, T> {
 }
 
 impl<'a, T> ExactSizeIterator for Iter<'a, T> {}
+
+impl<'a, T> Clone for Iter<'a, T> {
+    fn clone(&self) -> Self {
+        Iter {
+            ring: self.ring,
+            tail: self.tail,
+            len: self.len,
+        }
+    }
+}
 
 /// `ArrayDeque` mutable iterator
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
