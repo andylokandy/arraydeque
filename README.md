@@ -4,7 +4,7 @@
 [![crates.io](https://img.shields.io/crates/v/arraydeque.svg)](https://crates.io/crates/arraydeque)
 [![docs.rs](https://docs.rs/arraydeque/badge.svg)](https://docs.rs/arraydeque)
 
-A circular buffer with fixed capacity.  Requires Rust 1.56+.
+A circular buffer with fixed capacity.  Requires Rust 1.59+.
 
 This crate is inspired by [**bluss/arrayvec**](https://github.com/bluss/arrayvec)
 
@@ -16,7 +16,7 @@ First, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-arraydeque = "0.4"
+arraydeque = "0.5"
 ```
 
 Next, add this to your crate root:
@@ -57,6 +57,8 @@ fn main() {
 ```
 
 ## Changelog
+
+- 0.5.0 Support consnt generic capacity. Remove `use_generic_array` feature.
 
 - 0.4.5 Update `generic-array` to `0.12`.
 

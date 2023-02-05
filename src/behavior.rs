@@ -15,7 +15,7 @@
 //! ```
 //! use arraydeque::{ArrayDeque, Saturating, CapacityError};
 //!
-//! let mut tester: ArrayDeque<[_; 2], Saturating> = ArrayDeque::new();
+//! let mut tester: ArrayDeque<_, 2, Saturating> = ArrayDeque::new();
 //!
 //! assert_eq!(tester.push_back(1), Ok(()));
 //! assert_eq!(tester.push_back(2), Ok(()));
@@ -30,7 +30,7 @@
 //! ```
 //! use arraydeque::{ArrayDeque, Wrapping};
 //!
-//! let mut tester: ArrayDeque<[_; 2], Wrapping> = ArrayDeque::new();
+//! let mut tester: ArrayDeque<_, 2, Wrapping> = ArrayDeque::new();
 //!
 //! assert_eq!(tester.push_back(1), None);
 //! assert_eq!(tester.push_back(2), None);
