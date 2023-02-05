@@ -16,7 +16,7 @@ First, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-arraydeque = "0.4"
+arraydeque = "0.5"
 ```
 
 Next, add this to your crate root:
@@ -57,6 +57,8 @@ fn main() {
 ```
 
 ## Changelog
+
+- 0.5.0 Support consnt generic capacity. Remove `use_generic_array` feature.
 
 - 0.4.5 Update `generic-array` to `0.12`.
 
