@@ -38,7 +38,7 @@ pub unsafe trait Array {
 #[doc(hidden)]
 pub trait Index: PartialEq + Copy {
     fn to_usize(self) -> usize;
-    fn from(usize) -> Self;
+    fn from(_: usize) -> Self;
 }
 
 impl Index for u8 {
@@ -93,19 +93,19 @@ macro_rules! fix_array_impl {
     ($index_type:ty, $len:expr) => {
         unsafe impl<T> Array for [T; $len] {
             type Item = T;
-        
+
             type Index = $index_type;
-        
+
             #[inline(always)]
             fn as_ptr(&self) -> *const T {
                 self as *const _ as *const T
             }
-        
+
             #[inline(always)]
             fn as_mut_ptr(&mut self) -> *mut T {
                 self as *mut _ as *mut T
             }
-        
+
             #[inline(always)]
             fn capacity() -> usize {
                 $len
