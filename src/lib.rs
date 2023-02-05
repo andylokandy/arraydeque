@@ -17,10 +17,6 @@
 //!   - Conversions between `ArrayDeque` and `Vec`
 //!   - Use libstd
 //!
-//! - `use_generic_array`
-//!   - Optional
-//!   - Allow to use `GenericArray`
-//!
 //! # Usage
 //!
 //! First, add the following to your `Cargo.toml`:
@@ -58,8 +54,6 @@
 
 #[cfg(not(any(feature = "std", test)))]
 extern crate core as std;
-#[cfg(feature = "use_generic_array")]
-extern crate generic_array;
 
 use std::cmp;
 use std::cmp::Ordering;
