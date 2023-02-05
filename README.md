@@ -59,7 +59,7 @@ fn main() {
 ## Changelog
 
 - 0.5.1 Make `ArrayDeque::new()` a const fn.
-- 
+
 - 0.5.0 Support consnt generic capacity. Remove `use_generic_array` feature.
 
 - 0.4.5 Update `generic-array` to `0.12`.
