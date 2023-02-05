@@ -42,7 +42,7 @@ extern crate arraydeque;
 use arraydeque::ArrayDeque;
 
 fn main() {
-    let mut deque: ArrayDeque<[_; 2]> = ArrayDeque::new();
+    let mut deque: ArrayDeque<_, 2> = ArrayDeque::new();
     assert_eq!(deque.capacity(), 2);
     assert_eq!(deque.len(), 0);
 
