@@ -13,10 +13,6 @@ homepage = "https://github.com/andylokandy/arraydeque"
 keywords = ["ring", "circular", "stack", "deque", "array"]
 categories = ["no-std", "data-structures", "memory-management"]
 
-[dependencies]
-generic-array = { version = "0.12", optional = true }
-
 [features]
 default = ["std"]
 std = []
-use_generic_array = ["generic-array"]
