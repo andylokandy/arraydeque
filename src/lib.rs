@@ -1002,7 +1002,7 @@ impl<T, const CAP: usize, B: Behavior> ArrayDeque<T, CAP, B> {
     /// let buf: ArrayDeque<usize, 2> = ArrayDeque::new();
     /// ```
     #[inline]
-    pub fn new() -> ArrayDeque<T, CAP, B> {
+    pub const fn new() -> ArrayDeque<T, CAP, B> {
         ArrayDeque {
             xs: MaybeUninit::uninit(),
             tail: 0,
@@ -1023,7 +1023,7 @@ impl<T, const CAP: usize, B: Behavior> ArrayDeque<T, CAP, B> {
     /// assert_eq!(buf.capacity(), 2);
     /// ```
     #[inline]
-    pub fn capacity(&self) -> usize {
+    pub const fn capacity(&self) -> usize {
         CAP
     }
 
