@@ -1,5 +1,5 @@
 //! A circular buffer with fixed capacity.
-//! Requires Rust 1.20+
+//! Requires Rust 1.56+
 //!
 //! It can be stored directly on the stack if needed.
 //!
@@ -54,7 +54,6 @@
 //! See the [behavior module documentation](behavior/index.html) for more.
 
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
-#![cfg_attr(has_union_feature, feature(untagged_unions))]
 #![deny(missing_docs)]
 
 #[cfg(not(any(feature = "std", test)))]
@@ -68,18 +67,17 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
 use std::marker;
+use std::mem::MaybeUninit;
 use std::ops::Index;
 use std::ops::IndexMut;
 use std::ptr;
 
 use array::Index as ArrayIndex;
 use behavior::Behavior;
-use maybe_uninit::MaybeUninit;
 
 mod array;
 pub mod behavior;
 mod error;
-mod maybe_uninit;
 mod range;
 
 pub use array::Array;
@@ -210,6 +208,8 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     /// assert_eq!(overflow, Err(CapacityError { element: 4 }));
     /// assert_eq!(buf.back(), Some(&3));
     /// ```
+    #[track_caller]
+    #[inline]
     pub fn insert(&mut self, index: usize, element: A::Item) -> Result<(), CapacityError<A::Item>> {
         assert!(index <= self.len(), "index out of bounds");
 
@@ -240,16 +240,16 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     ///
     /// let mut buf: ArrayDeque<[_; 7]> = ArrayDeque::new();
     ///
-    /// buf.extend_front(vec![9, 8, 7].into_iter());
-    /// buf.extend_front(vec![6, 5, 4].into_iter());
+    /// buf.extend_front([9, 8, 7].into_iter());
+    /// buf.extend_front([6, 5, 4].into_iter());
     ///
     /// assert_eq!(buf.len(), 6);
     ///
     /// // max capacity reached
-    /// buf.extend_front(vec![3, 2, 1].into_iter());
+    /// buf.extend_front([3, 2, 1].into_iter());
     ///
     /// assert_eq!(buf.len(), 7);
-    /// assert_eq!(buf, vec![3, 4, 5, 6, 7, 8, 9].into());
+    /// assert_eq!(buf, [3, 4, 5, 6, 7, 8, 9].into());
     /// ```
     #[allow(unused_must_use)]
     pub fn extend_front<I>(&mut self, iter: I)
@@ -278,16 +278,16 @@ impl<A: Array> ArrayDeque<A, Saturating> {
     ///
     /// let mut buf: ArrayDeque<[_; 7]> = ArrayDeque::new();
     ///
-    /// buf.extend_back(vec![1, 2, 3].into_iter());
-    /// buf.extend_back(vec![4, 5, 6].into_iter());
+    /// buf.extend_back([1, 2, 3].into_iter());
+    /// buf.extend_back([4, 5, 6].into_iter());
     ///
     /// assert_eq!(buf.len(), 6);
     ///
     /// // max capacity reached
-    /// buf.extend_back(vec![7, 8, 9].into_iter());
+    /// buf.extend_back([7, 8, 9].into_iter());
     ///
     /// assert_eq!(buf.len(), 7);
-    /// assert_eq!(buf, vec![1, 2, 3, 4, 5, 6, 7].into());
+    /// assert_eq!(buf, [1, 2, 3, 4, 5, 6, 7].into());
     /// ```
     #[allow(unused_must_use)]
     pub fn extend_back<I>(&mut self, iter: I)
@@ -435,16 +435,16 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     ///
     /// let mut buf: ArrayDeque<[_; 7], Wrapping> = ArrayDeque::new();
     ///
-    /// buf.extend_front(vec![9, 8, 7].into_iter());
-    /// buf.extend_front(vec![6, 5, 4].into_iter());
+    /// buf.extend_front([9, 8, 7].into_iter());
+    /// buf.extend_front([6, 5, 4].into_iter());
     ///
     /// assert_eq!(buf.len(), 6);
     ///
     /// // max capacity reached
-    /// buf.extend_front(vec![3, 2, 1].into_iter());
+    /// buf.extend_front([3, 2, 1].into_iter());
     ///
     /// assert_eq!(buf.len(), 7);
-    /// assert_eq!(buf, vec![1, 2, 3, 4, 5, 6, 7].into());
+    /// assert_eq!(buf, [1, 2, 3, 4, 5, 6, 7].into());
     /// ```
     pub fn extend_front<I>(&mut self, iter: I)
     where
@@ -470,16 +470,16 @@ impl<A: Array> ArrayDeque<A, Wrapping> {
     ///
     /// let mut buf: ArrayDeque<[_; 7], Wrapping> = ArrayDeque::new();
     ///
-    /// buf.extend_back(vec![1, 2, 3].into_iter());
-    /// buf.extend_back(vec![4, 5, 6].into_iter());
+    /// buf.extend_back([1, 2, 3].into_iter());
+    /// buf.extend_back([4, 5, 6].into_iter());
     ///
     /// assert_eq!(buf.len(), 6);
     ///
     /// // max capacity reached
-    /// buf.extend_back(vec![7, 8, 9].into_iter());
+    /// buf.extend_back([7, 8, 9].into_iter());
     ///
     /// assert_eq!(buf.len(), 7);
-    /// assert_eq!(buf, vec![3, 4, 5, 6, 7, 8, 9].into());
+    /// assert_eq!(buf, [3, 4, 5, 6, 7, 8, 9].into());
     /// ```
     pub fn extend_back<I>(&mut self, iter: I)
     where
@@ -538,12 +538,12 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
     #[inline]
     fn ptr(&self) -> *const A::Item {
-        self.xs.as_ptr()
+        self.xs.as_ptr().cast()
     }
 
     #[inline]
     fn ptr_mut(&mut self) -> *mut A::Item {
-        self.xs.as_mut_ptr()
+        self.xs.as_mut_ptr().cast()
     }
 
     #[inline]
@@ -859,11 +859,8 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
             len,
             A::capacity()
         );
-        ptr::copy(
-            self.ptr_mut().offset(src as isize),
-            self.ptr_mut().offset(dst as isize),
-            len,
-        );
+        let xs = self.ptr_mut();
+        ptr::copy(xs.add(src), xs.add(dst), len);
     }
 
     /// Copies a potentially wrapping block of memory len long from src to dest.
@@ -994,12 +991,12 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
 
     #[inline]
     unsafe fn buffer_read(&mut self, offset: usize) -> A::Item {
-        ptr::read(self.ptr().offset(offset as isize))
+        ptr::read(self.ptr().add(offset))
     }
 
     #[inline]
     unsafe fn buffer_write(&mut self, offset: usize, element: A::Item) {
-        ptr::write(self.ptr_mut().offset(offset as isize), element);
+        ptr::write(self.ptr_mut().add(offset), element);
     }
 }
 
@@ -1015,13 +1012,11 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     #[inline]
     pub fn new() -> ArrayDeque<A, B> {
-        unsafe {
-            ArrayDeque {
-                xs: MaybeUninit::uninitialized(),
-                tail: ArrayIndex::from(0),
-                len: ArrayIndex::from(0),
-                marker: marker::PhantomData,
-            }
+        ArrayDeque {
+            xs: MaybeUninit::uninit(),
+            tail: ArrayIndex::from(0),
+            len: ArrayIndex::from(0),
+            marker: marker::PhantomData,
         }
     }
 
@@ -1079,6 +1074,16 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    /// Entire capacity of the underlying storage
+    fn as_uninit_slice(&self) -> &[MaybeUninit<A::Item>] {
+        unsafe { std::slice::from_raw_parts(self.xs.as_ptr().cast(), A::capacity()) }
+    }
+
+    /// Entire capacity of the underlying storage
+    fn as_uninit_slice_mut(&mut self) -> &mut [MaybeUninit<A::Item>] {
+        unsafe { std::slice::from_raw_parts_mut(self.xs.as_mut_ptr().cast(), A::capacity()) }
     }
 
     /// Returns true if the buffer is full.
@@ -1241,7 +1246,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     pub fn get(&self, index: usize) -> Option<&A::Item> {
         if index < self.len() {
             let idx = Self::wrap_add(self.tail(), index);
-            unsafe { Some(&*self.ptr().offset(idx as isize)) }
+            unsafe { Some(&*self.ptr().add(idx)) }
         } else {
             None
         }
@@ -1268,7 +1273,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     pub fn get_mut(&mut self, index: usize) -> Option<&mut A::Item> {
         if index < self.len() {
             let idx = Self::wrap_add(self.tail(), index);
-            unsafe { Some(&mut *self.ptr_mut().offset(idx as isize)) }
+            unsafe { Some(&mut *self.ptr_mut().add(idx)) }
         } else {
             None
         }
@@ -1287,7 +1292,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.push_back(1);
     /// buf.push_back(2);
     ///
-    /// let expected = vec![0, 1, 2];
+    /// let expected = [0, 1, 2];
     ///
     /// assert!(buf.iter().eq(expected.iter()));
     /// ```
@@ -1296,7 +1301,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         Iter {
             tail: self.tail(),
             len: self.len(),
-            ring: self.xs.as_slice(),
+            ring: self.as_uninit_slice(),
         }
     }
 
@@ -1313,7 +1318,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.push_back(1);
     /// buf.push_back(2);
     ///
-    /// let mut expected = vec![0, 1, 2];
+    /// let mut expected = [0, 1, 2];
     ///
     /// assert!(buf.iter_mut().eq(expected.iter_mut()));
     /// ```
@@ -1322,7 +1327,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         IterMut {
             tail: self.tail(),
             len: self.len(),
-            ring: self.xs.as_mut_slice(),
+            ring: self.as_uninit_slice_mut(),
         }
     }
 
@@ -1337,8 +1342,8 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// use arraydeque::ArrayDeque;
     ///
     /// let mut buf: ArrayDeque<[isize; 10]> = ArrayDeque::new();
-    /// buf.extend_back(vec![1, 2, 3]);
-    /// buf.extend_front(vec![-1, -2, -3]);
+    /// buf.extend_back([1, 2, 3]);
+    /// buf.extend_front([-1, -2, -3]);
     ///
     /// buf.linearize();
     ///
@@ -1366,11 +1371,9 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                     new_tail = src;
                 }
 
+                let xs = self.ptr_mut();
                 unsafe {
-                    ptr::swap(
-                        self.ptr_mut().offset(dst as isize),
-                        self.ptr_mut().offset(src as isize),
-                    );
+                    ptr::swap(xs.add(dst), xs.add(src));
                 }
 
                 dst = dst + 1;
@@ -1486,18 +1489,20 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     ///
     /// {
     ///     let drain = buf.drain(2..);
-    ///     assert!(vec![2].into_iter().eq(drain));
+    ///     assert!([2].into_iter().eq(drain));
     /// }
     ///
     /// {
     ///     let iter = buf.iter();
-    ///     assert!(vec![0, 1].iter().eq(iter));
+    ///     assert!([0, 1].iter().eq(iter));
     /// }
     ///
     /// // A full range clears all contents
     /// buf.drain(..);
     /// assert!(buf.is_empty());
     /// ```
+    #[track_caller]
+    #[inline]
     pub fn drain<R>(&mut self, range: R) -> Drain<A, B>
     where
         R: RangeArgument<usize>,
@@ -1521,7 +1526,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
             iter: Iter {
                 tail: drain_tail,
                 len: drain_len,
-                ring: self.xs.as_mut_slice(),
+                ring: self.as_uninit_slice_mut(),
             },
         }
     }
@@ -1547,20 +1552,17 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     ///
     /// buf.swap(0, 2);
     ///
-    /// assert_eq!(buf, vec![2, 1, 0].into());
+    /// assert_eq!(buf, [2, 1, 0].into());
     /// ```
+    #[track_caller]
     #[inline]
     pub fn swap(&mut self, i: usize, j: usize) {
         assert!(i < self.len());
         assert!(j < self.len());
         let ri = Self::wrap_add(self.tail(), i);
         let rj = Self::wrap_add(self.tail(), j);
-        unsafe {
-            ptr::swap(
-                self.ptr_mut().offset(ri as isize),
-                self.ptr_mut().offset(rj as isize),
-            )
-        }
+        let xs = self.ptr_mut();
+        unsafe { ptr::swap(xs.add(ri), xs.add(rj)) }
     }
 
     /// Removes an element from anywhere in the `ArrayDeque` and returns it, replacing it with the
@@ -1585,7 +1587,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.push_back(2);
     ///
     /// assert_eq!(buf.swap_remove_back(0), Some(0));
-    /// assert_eq!(buf, vec![2, 1].into());
+    /// assert_eq!(buf, [2, 1].into());
     /// ```
     pub fn swap_remove_back(&mut self, index: usize) -> Option<A::Item> {
         let length = self.len();
@@ -1619,7 +1621,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.push_back(2);
     ///
     /// assert_eq!(buf.swap_remove_front(2), Some(2));
-    /// assert_eq!(buf, vec![1, 0].into());
+    /// assert_eq!(buf, [1, 0].into());
     /// ```
     pub fn swap_remove_front(&mut self, index: usize) -> Option<A::Item> {
         let length = self.len();
@@ -1650,7 +1652,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.push_back(2);
     ///
     /// assert_eq!(buf.remove(1), Some(1));
-    /// assert_eq!(buf, vec![0, 2].into());
+    /// assert_eq!(buf, [0, 2].into());
     /// ```
     pub fn remove(&mut self, index: usize) -> Option<A::Item> {
         if self.is_empty() || self.len() <= index {
@@ -1846,6 +1848,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// assert_eq!(buf.len(), 1);
     /// assert_eq!(buf2.len(), 2);
     /// ```
+    #[track_caller]
     #[inline]
     pub fn split_off(&mut self, at: usize) -> Self {
         let len = self.len();
@@ -1864,7 +1867,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                 let amount_in_first = first_len - at;
 
                 ptr::copy_nonoverlapping(
-                    first_half.as_ptr().offset(at as isize),
+                    first_half.as_ptr().add(at),
                     other.ptr_mut(),
                     amount_in_first,
                 );
@@ -1872,7 +1875,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                 // just take all of the second half.
                 ptr::copy_nonoverlapping(
                     second_half.as_ptr(),
-                    other.ptr_mut().offset(amount_in_first as isize),
+                    other.ptr_mut().add(amount_in_first),
                     second_len,
                 );
             } else {
@@ -1881,7 +1884,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
                 let offset = at - first_len;
                 let amount_in_second = second_len - offset;
                 ptr::copy_nonoverlapping(
-                    second_half.as_ptr().offset(offset as isize),
+                    second_half.as_ptr().add(offset),
                     other.ptr_mut(),
                     amount_in_second,
                 );
@@ -1913,7 +1916,7 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// buf.extend_back(0..4);
     /// buf.retain(|&x| x % 2 == 0);
     ///
-    /// assert_eq!(buf, vec![0, 2].into());
+    /// assert_eq!(buf, [0, 2].into());
     /// ```
     pub fn retain<F>(&mut self, mut f: F)
     where
@@ -1956,9 +1959,24 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
     /// ```
     #[inline]
     pub fn as_slices(&self) -> (&[A::Item], &[A::Item]) {
-        unsafe {
-            let (first, second) = (*(self as *const Self as *mut Self)).as_mut_slices();
-            (first, second)
+        let contiguous = self.is_contiguous();
+        let head = self.head();
+        let tail = self.tail();
+        let buf = self.as_uninit_slice();
+
+        if contiguous {
+            let (empty, buf) = buf.split_at(0);
+            unsafe {
+                (
+                    slice_assume_init_ref(&buf[tail..head]),
+                    slice_assume_init_ref(empty),
+                )
+            }
+        } else {
+            let (mid, right) = buf.split_at(tail);
+            let (left, _) = mid.split_at(head);
+
+            unsafe { (slice_assume_init_ref(right), slice_assume_init_ref(left)) }
         }
     }
 
@@ -1986,18 +2004,39 @@ impl<A: Array, B: Behavior> ArrayDeque<A, B> {
         let contiguous = self.is_contiguous();
         let head = self.head();
         let tail = self.tail();
-        let buf = self.xs.as_mut_slice();
+        let buf = self.as_uninit_slice_mut();
 
         if contiguous {
             let (empty, buf) = buf.split_at_mut(0);
-            (&mut buf[tail..head], empty)
+            unsafe {
+                (
+                    slice_assume_init_mut(&mut buf[tail..head]),
+                    slice_assume_init_mut(empty),
+                )
+            }
         } else {
             let (mid, right) = buf.split_at_mut(tail);
             let (left, _) = mid.split_at_mut(head);
 
-            (right, left)
+            unsafe { (slice_assume_init_mut(right), slice_assume_init_mut(left)) }
         }
     }
+}
+
+/// Copy of currently-unstable `MaybeUninit::slice_assume_init_ref`.
+pub unsafe fn slice_assume_init_ref<T>(slice: &[MaybeUninit<T>]) -> &[T] {
+    // SAFETY: casting `slice` to a `*const [T]` is safe since the caller guarantees that
+    // `slice` is initialized, and `MaybeUninit` is guaranteed to have the same layout as `T`.
+    // The pointer obtained is valid since it refers to memory owned by `slice` which is a
+    // reference and thus guaranteed to be valid for reads.
+    &*(slice as *const [MaybeUninit<T>] as *const [T])
+}
+
+/// Copy of currently-unstable `MaybeUninit::slice_assume_init_mut`.
+pub unsafe fn slice_assume_init_mut<T>(slice: &mut [MaybeUninit<T>]) -> &mut [T] {
+    // SAFETY: similar to safety notes for `slice_assume_init_ref`, but we have a
+    // mutable reference which is also guaranteed to be valid for writes.
+    &mut *(slice as *mut [MaybeUninit<T>] as *mut [T])
 }
 
 impl<A: Array> From<ArrayDeque<A, Wrapping>> for ArrayDeque<A, Saturating> {
@@ -2019,6 +2058,15 @@ where
 {
     fn from(vec: Vec<A::Item>) -> Self {
         vec.into_iter().collect()
+    }
+}
+
+impl<A: Array, B: Behavior, const N: usize> From<[A::Item; N]> for ArrayDeque<A, B>
+where
+    Self: FromIterator<A::Item>,
+{
+    fn from(arr: [A::Item; N]) -> Self {
+        arr.into_iter().collect()
     }
 }
 
@@ -2203,7 +2251,7 @@ fn wrap_sub(index: usize, subtrahend: usize, capacity: usize) -> usize {
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 #[derive(Clone)]
 pub struct Iter<'a, T: 'a> {
-    ring: &'a [T],
+    ring: &'a [MaybeUninit<T>],
     tail: usize,
     len: usize,
 }
@@ -2219,7 +2267,7 @@ impl<'a, T> Iterator for Iter<'a, T> {
         let tail = self.tail;
         self.tail = wrap_add(self.tail, 1, self.ring.len());
         self.len -= 1;
-        unsafe { Some(self.ring.get_unchecked(tail)) }
+        unsafe { Some(self.ring.get_unchecked(tail).assume_init_ref()) }
     }
 
     #[inline]
@@ -2236,7 +2284,7 @@ impl<'a, T> DoubleEndedIterator for Iter<'a, T> {
         }
         self.len -= 1;
         let head = wrap_add(self.tail, self.len, self.ring.len());
-        unsafe { Some(self.ring.get_unchecked(head)) }
+        unsafe { Some(self.ring.get_unchecked(head).assume_init_ref()) }
     }
 }
 
@@ -2245,7 +2293,7 @@ impl<'a, T> ExactSizeIterator for Iter<'a, T> {}
 /// `ArrayDeque` mutable iterator
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 pub struct IterMut<'a, T: 'a> {
-    ring: &'a mut [T],
+    ring: &'a mut [MaybeUninit<T>],
     tail: usize,
     len: usize,
 }
@@ -2262,8 +2310,8 @@ impl<'a, T> Iterator for IterMut<'a, T> {
         self.tail = wrap_add(self.tail, 1, self.ring.len());
         self.len -= 1;
         unsafe {
-            let elem = self.ring.get_unchecked_mut(tail);
-            Some(&mut *(elem as *mut _))
+            let elem = self.ring.get_unchecked_mut(tail).assume_init_mut();
+            Some(std::mem::transmute::<&mut T, &'a mut T>(elem))
         }
     }
 
@@ -2282,8 +2330,8 @@ impl<'a, T> DoubleEndedIterator for IterMut<'a, T> {
         self.len -= 1;
         let head = wrap_add(self.tail, self.len, self.ring.len());
         unsafe {
-            let elem = self.ring.get_unchecked_mut(head);
-            Some(&mut *(elem as *mut _))
+            let elem = self.ring.get_unchecked_mut(head).assume_init_mut();
+            Some(std::mem::transmute::<&mut T, &'a mut T>(elem))
         }
     }
 }
@@ -2637,6 +2685,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn test_drain() {
         const CAP: usize = 8;
         let mut tester: ArrayDeque<[_; CAP]> = ArrayDeque::new();
@@ -2932,127 +2981,127 @@ mod tests {
     #[test]
     fn test_linearize() {
         let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3]);
-        tester.extend_front(vec![-1, -2]);
-        assert_eq!(tester, vec![-2, -1, 1, 2, 3].into());
+        tester.extend_back([1, 2, 3]);
+        tester.extend_front([-1, -2]);
+        assert_eq!(tester, [-2, -1, 1, 2, 3].into());
         tester.linearize();
-        assert_eq!(tester, vec![-2, -1, 1, 2, 3].into());
+        assert_eq!(tester, [-2, -1, 1, 2, 3].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2]);
-        tester.extend_front(vec![-1, -2, -3]);
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2].into());
+        tester.extend_back([1, 2]);
+        tester.extend_front([-1, -2, -3]);
+        assert_eq!(tester, [-3, -2, -1, 1, 2].into());
         tester.linearize();
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2].into());
+        assert_eq!(tester, [-3, -2, -1, 1, 2].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3]);
-        tester.extend_front(vec![-1, -2, -3]);
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2, 3].into());
+        tester.extend_back([1, 2, 3]);
+        tester.extend_front([-1, -2, -3]);
+        assert_eq!(tester, [-3, -2, -1, 1, 2, 3].into());
         tester.linearize();
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2, 3].into());
+        assert_eq!(tester, [-3, -2, -1, 1, 2, 3].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 5], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3]);
-        tester.extend_front(vec![-1, -2]);
-        assert_eq!(tester, vec![-2, -1, 1, 2, 3].into());
+        tester.extend_back([1, 2, 3]);
+        tester.extend_front([-1, -2]);
+        assert_eq!(tester, [-2, -1, 1, 2, 3].into());
         tester.linearize();
-        assert_eq!(tester, vec![-2, -1, 1, 2, 3].into());
+        assert_eq!(tester, [-2, -1, 1, 2, 3].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 5], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2]);
-        tester.extend_front(vec![-1, -2, -3]);
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2].into());
+        tester.extend_back([1, 2]);
+        tester.extend_front([-1, -2, -3]);
+        assert_eq!(tester, [-3, -2, -1, 1, 2].into());
         tester.linearize();
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2].into());
+        assert_eq!(tester, [-3, -2, -1, 1, 2].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 6], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3]);
-        tester.extend_front(vec![-1, -2, -3]);
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2, 3].into());
+        tester.extend_back([1, 2, 3]);
+        tester.extend_front([-1, -2, -3]);
+        assert_eq!(tester, [-3, -2, -1, 1, 2, 3].into());
         tester.linearize();
-        assert_eq!(tester, vec![-3, -2, -1, 1, 2, 3].into());
+        assert_eq!(tester, [-3, -2, -1, 1, 2, 3].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3, 4, 5]);
-        tester.extend_front(vec![-1]);
-        assert_eq!(tester, vec![-1, 1, 2, 3, 4, 5].into());
+        tester.extend_back([1, 2, 3, 4, 5]);
+        tester.extend_front([-1]);
+        assert_eq!(tester, [-1, 1, 2, 3, 4, 5].into());
         tester.linearize();
-        assert_eq!(tester, vec![-1, 1, 2, 3, 4, 5].into());
+        assert_eq!(tester, [-1, 1, 2, 3, 4, 5].into());
         assert_eq!(tester.as_slices().1.len(), 0);
 
         let mut tester: ArrayDeque<[isize; 10], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1]);
-        tester.extend_front(vec![-1, -2, -3, -4, -5]);
-        assert_eq!(tester, vec![-5, -4, -3, -2, -1, 1].into());
+        tester.extend_back([1]);
+        tester.extend_front([-1, -2, -3, -4, -5]);
+        assert_eq!(tester, [-5, -4, -3, -2, -1, 1].into());
         tester.linearize();
-        assert_eq!(tester, vec![-5, -4, -3, -2, -1, 1].into());
+        assert_eq!(tester, [-5, -4, -3, -2, -1, 1].into());
         assert_eq!(tester.as_slices().1.len(), 0);
     }
 
     #[test]
     fn test_from_iterator_saturating() {
         assert_eq!(
-            ArrayDeque::<[_; 3], Saturating>::from_iter(vec![1, 2, 3]),
-            vec![1, 2, 3].into()
+            ArrayDeque::<[_; 3], Saturating>::from_iter([1, 2, 3]),
+            [1, 2, 3].into()
         );
         assert_eq!(
-            ArrayDeque::<[_; 3], Saturating>::from_iter(vec![1, 2, 3, 4, 5]),
-            vec![1, 2, 3].into()
+            ArrayDeque::<[_; 3], Saturating>::from_iter([1, 2, 3, 4, 5]),
+            [1, 2, 3].into()
         );
     }
 
     #[test]
     fn test_from_iterator_wrapping() {
         assert_eq!(
-            ArrayDeque::<[_; 3], Wrapping>::from_iter(vec![1, 2, 3]),
-            vec![1, 2, 3].into()
+            ArrayDeque::<[_; 3], Wrapping>::from_iter([1, 2, 3]),
+            [1, 2, 3].into()
         );
         assert_eq!(
-            ArrayDeque::<[_; 3], Wrapping>::from_iter(vec![1, 2, 3, 4, 5]),
-            vec![3, 4, 5].into()
+            ArrayDeque::<[_; 3], Wrapping>::from_iter([1, 2, 3, 4, 5]),
+            [3, 4, 5].into()
         );
     }
 
     #[test]
     fn test_extend_front_saturating() {
         let mut tester: ArrayDeque<[usize; 3], Saturating> = ArrayDeque::new();
-        tester.extend_front(vec![1, 2, 3]);
-        assert_eq!(tester, vec![3, 2, 1].into());
-        tester.extend_front(vec![4, 5]);
-        assert_eq!(tester, vec![3, 2, 1].into());
+        tester.extend_front([1, 2, 3]);
+        assert_eq!(tester, [3, 2, 1].into());
+        tester.extend_front([4, 5]);
+        assert_eq!(tester, [3, 2, 1].into());
     }
 
     #[test]
     fn test_extend_back_saturating() {
         let mut tester: ArrayDeque<[usize; 3], Saturating> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3]);
-        assert_eq!(tester, vec![1, 2, 3].into());
-        tester.extend_back(vec![4, 5]);
-        assert_eq!(tester, vec![1, 2, 3].into());
+        tester.extend_back([1, 2, 3]);
+        assert_eq!(tester, [1, 2, 3].into());
+        tester.extend_back([4, 5]);
+        assert_eq!(tester, [1, 2, 3].into());
     }
 
     #[test]
     fn test_extend_front_wrapping() {
         let mut tester: ArrayDeque<[usize; 3], Wrapping> = ArrayDeque::new();
-        tester.extend_front(vec![1, 2, 3]);
-        assert_eq!(tester, vec![3, 2, 1].into());
-        tester.extend_front(vec![4, 5]);
-        assert_eq!(tester, vec![5, 4, 3].into());
+        tester.extend_front([1, 2, 3]);
+        assert_eq!(tester, [3, 2, 1].into());
+        tester.extend_front([4, 5]);
+        assert_eq!(tester, [5, 4, 3].into());
     }
 
     #[test]
     fn test_extend_back_wrapping() {
         let mut tester: ArrayDeque<[usize; 3], Wrapping> = ArrayDeque::new();
-        tester.extend_back(vec![1, 2, 3]);
-        assert_eq!(tester, vec![1, 2, 3].into());
-        tester.extend_back(vec![4, 5]);
-        assert_eq!(tester, vec![3, 4, 5].into());
+        tester.extend_back([1, 2, 3]);
+        assert_eq!(tester, [1, 2, 3].into());
+        tester.extend_back([4, 5]);
+        assert_eq!(tester, [3, 4, 5].into());
     }
 }
