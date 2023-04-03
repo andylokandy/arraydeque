@@ -19,7 +19,7 @@ First, add the following to your `Cargo.toml`:
 arraydeque = "0.5"
 ```
 
-Next, add this to your crate root:
+If you use the 2015 rust edition, add this to your crate root:
 
 ```rust
 extern crate arraydeque;
