@@ -1011,6 +1011,32 @@ impl<T, const CAP: usize, B: Behavior> ArrayDeque<T, CAP, B> {
         }
     }
 
+    /// Initializes a `MaybeUninit<ArrayDeque>`. This is useful to guarantee
+    /// that a potantially large `ArrrayDeque` won't overflow the stack
+    /// when it's intended for the heap.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// #![feature(new_uninit)]
+    /// use std::mem::MaybeUninit;
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// // Equivalent to `Box::new(ArrayDeque::new())` but avoids going via the stack
+    ///
+    /// let mut buf: Box<MaybeUninit<ArrayDeque<usize, 2>>> = Box::new_uninit();
+    /// ArrayDeque::new_init(&mut buf);
+    /// let buf: Box<ArrayDeque<usize, 2>> = unsafe { Box::<MaybeUninit<_>>::assume_init(buf) };
+    /// ```
+    #[inline]
+    pub fn new_init(this: &mut MaybeUninit<Self>) -> &mut Self {
+        unsafe {
+            ptr::addr_of_mut!((*this.as_mut_ptr()).tail).write(0);
+            ptr::addr_of_mut!((*this.as_mut_ptr()).len).write(0);
+            this.assume_init_mut()
+        }
+    }
+
     /// Return the capacity of the `ArrayDeque`.
     ///
     /// # Examples
