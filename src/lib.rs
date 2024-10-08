@@ -2071,12 +2071,6 @@ where
     }
 }
 
-impl<T, const CAP: usize, B: Behavior> Drop for ArrayDeque<T, CAP, B> {
-    fn drop(&mut self) {
-        self.clear();
-    }
-}
-
 impl<T, const CAP: usize, B: Behavior> Default for ArrayDeque<T, CAP, B> {
     #[inline]
     fn default() -> Self {
@@ -2449,6 +2443,9 @@ impl<'a, T, const CAP: usize, B: Behavior> DoubleEndedIterator for Drain<'a, T, 
 
 impl<'a, T, const CAP: usize, B: Behavior> ExactSizeIterator for Drain<'a, T, CAP, B> {}
 
+impl<T, const CAP: usize> Copy for ArrayDeque<T, CAP, Saturating> where T: Copy {}
+impl<T, const CAP: usize> Copy for ArrayDeque<T, CAP, Wrapping> where T: Copy {}
+
 #[cfg(test)]
 mod tests {
     #![allow(unused_must_use)]
@@ -2691,45 +2688,6 @@ mod tests {
                 }
             }
         }
-    }
-
-    #[test]
-    fn test_drop() {
-        use std::cell::Cell;
-
-        let flag = &Cell::new(0);
-
-        struct Bump<'a>(&'a Cell<i32>);
-
-        impl<'a> Drop for Bump<'a> {
-            fn drop(&mut self) {
-                let n = self.0.get();
-                self.0.set(n + 1);
-            }
-        }
-
-        {
-            let mut tester = ArrayDeque::<Bump, 128>::new();
-            tester.push_back(Bump(flag));
-            tester.push_back(Bump(flag));
-        }
-        assert_eq!(flag.get(), 2);
-
-        // test something with the nullable pointer optimization
-        flag.set(0);
-        {
-            let mut tester = ArrayDeque::<_, 3>::new();
-            tester.push_back(vec![Bump(flag)]);
-            tester.push_back(vec![Bump(flag), Bump(flag)]);
-            tester.push_back(vec![]);
-            tester.push_back(vec![Bump(flag)]);
-            assert_eq!(flag.get(), 1);
-            drop(tester.pop_back());
-            assert_eq!(flag.get(), 1);
-            drop(tester.pop_back());
-            assert_eq!(flag.get(), 3);
-        }
-        assert_eq!(flag.get(), 4);
     }
 
     #[test]
