@@ -4,6 +4,7 @@ version = "0.5.1"
 authors = ["andylokandy"]
 license = "MIT/Apache-2.0"
 edition = "2021"
+rust-version = "1.61"
 
 description = "A ring buffer with a fixed capacity, which can be stored on the stack."
 documentation = "https://docs.rs/arraydeque"

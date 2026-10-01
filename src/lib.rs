@@ -1,5 +1,5 @@
 //! A circular buffer with fixed capacity.
-//! Requires Rust 1.59+
+//! Requires Rust 1.61+
 //!
 //! It can be stored directly on the stack if needed.
 //!
@@ -88,6 +88,38 @@ pub struct ArrayDeque<T, const CAP: usize, B: Behavior = Saturating> {
     tail: usize,
     len: usize,
     marker: marker::PhantomData<B>,
+}
+
+/// Transposes a `&mut MaybeUninit<[T; N]>` into a `&mut [MaybeUninit<T>]`.
+///
+/// A function of the field rather than a method so that a caller can hold it
+/// together with a borrow of another field.
+///
+/// `<MaybeUninit<[T; N]> as AsMut<[MaybeUninit<T>]>>::as_mut`, stable since 1.95.
+fn uninit_slice_mut<T, const CAP: usize>(xs: &mut MaybeUninit<[T; CAP]>) -> &mut [MaybeUninit<T>] {
+    // SAFETY: `MaybeUninit<[T; CAP]>` has the layout of `[MaybeUninit<T>; CAP]`.
+    unsafe { std::slice::from_raw_parts_mut(xs.as_mut_ptr().cast(), CAP) }
+}
+
+/// Adds the number of elements written to a deque's `len` when dropped,
+/// including when unwinding out of the caller's iterator, so written
+/// elements are neither leaked nor later read as uninitialized memory.
+///
+/// Counting here instead of on the deque's `len` also keeps the count in a
+/// register: the optimizer can't rule out aliasing between `len` and the
+/// storage being filled, so incrementing the deque's `len` in the loop goes
+/// through memory on every element and blocks vectorization. For the same
+/// reason the guard holds `&mut usize`, not the whole deque.
+struct AddLenOnDrop<'a> {
+    len: &'a mut usize,
+    written: usize,
+}
+
+impl Drop for AddLenOnDrop<'_> {
+    #[inline]
+    fn drop(&mut self) {
+        *self.len += self.written;
+    }
 }
 
 impl<T, const CAP: usize> ArrayDeque<T, CAP, Saturating> {
@@ -280,15 +312,75 @@ impl<T, const CAP: usize> ArrayDeque<T, CAP, Saturating> {
     /// assert_eq!(buf.len(), 7);
     /// assert_eq!(buf, [1, 2, 3, 4, 5, 6, 7].into());
     /// ```
-    #[allow(unused_must_use)]
     pub fn extend_back<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = T>,
     {
-        let take = self.capacity() - self.len();
-        for element in iter.into_iter().take(take) {
-            self.push_back(element);
+        let mut iter = iter.into_iter();
+        let regions = self.free_regions();
+        let buf = uninit_slice_mut(&mut self.xs);
+        let mut guard = AddLenOnDrop {
+            len: &mut self.len,
+            written: 0,
+        };
+        for &(start, end) in regions.iter() {
+            for slot in &mut buf[start..end] {
+                match iter.next() {
+                    Some(element) => {
+                        slot.write(element);
+                        guard.written += 1;
+                    }
+                    None => return,
+                }
+            }
         }
+    }
+
+    /// Extend deque from back with a copy of a slice.
+    ///
+    /// Does not copy more items than there is space for.
+    /// No error occurs if the slice is longer than the free capacity.
+    ///
+    /// The copy is at most two block copies, one per free region, whatever
+    /// the element type. `extend_back` over a slice iterator reaches the
+    /// same result only when the optimizer vectorizes its loop, which it
+    /// does not do for every element type or compiler version.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use arraydeque::ArrayDeque;
+    ///
+    /// let mut buf: ArrayDeque<_, 7> = ArrayDeque::new();
+    ///
+    /// buf.extend_back_from_slice(&[1, 2, 3]);
+    /// buf.extend_back_from_slice(&[4, 5, 6]);
+    ///
+    /// assert_eq!(buf.len(), 6);
+    ///
+    /// // max capacity reached
+    /// buf.extend_back_from_slice(&[7, 8, 9]);
+    ///
+    /// assert_eq!(buf.len(), 7);
+    /// assert_eq!(buf, [1, 2, 3, 4, 5, 6, 7].into());
+    /// ```
+    pub fn extend_back_from_slice(&mut self, slice: &[T])
+    where
+        T: Copy,
+    {
+        let [(start1, end1), (start2, _)] = self.free_regions();
+        let copied_len = slice.len().min(CAP - self.len());
+        let first_slice_len = copied_len.min(end1 - start1);
+        let buf = uninit_slice_mut(&mut self.xs);
+        write_copy_of_slice(
+            &mut buf[start1..start1 + first_slice_len],
+            &slice[..first_slice_len],
+        );
+        write_copy_of_slice(
+            &mut buf[start2..start2 + copied_len - first_slice_len],
+            &slice[first_slice_len..copied_len],
+        );
+        self.len += copied_len;
     }
 }
 
@@ -552,6 +644,23 @@ impl<T, const CAP: usize, B: Behavior> ArrayDeque<T, CAP, B> {
     #[inline]
     fn tail(&self) -> usize {
         self.tail
+    }
+
+    /// The free capacity as up to two index ranges into the storage, in
+    /// fill order: `head..CAP` then `0..tail` while the elements are
+    /// contiguous, `head..tail` once they wrap. A full deque yields two
+    /// empty ranges.
+    #[inline]
+    fn free_regions(&self) -> [(usize, usize); 2] {
+        let tail = self.tail();
+        // Left unwrapped so a full deque whose elements end at the end of
+        // storage reads as `CAP`, an empty first region, rather than 0.
+        let head = tail + self.len();
+        if head <= CAP {
+            [(head, CAP), (0, tail)]
+        } else {
+            [(head - CAP, tail), (0, 0)]
+        }
     }
 
     #[inline]
@@ -1074,7 +1183,7 @@ impl<T, const CAP: usize, B: Behavior> ArrayDeque<T, CAP, B> {
 
     /// Entire capacity of the underlying storage
     pub fn as_uninit_slice_mut(&mut self) -> &mut [MaybeUninit<T>] {
-        unsafe { std::slice::from_raw_parts_mut(self.xs.as_mut_ptr().cast(), CAP) }
+        uninit_slice_mut(&mut self.xs)
     }
 
     /// Returns true if the buffer is full.
@@ -2014,6 +2123,23 @@ impl<T, const CAP: usize, B: Behavior> ArrayDeque<T, CAP, B> {
     }
 }
 
+/// Copies the elements from `src` to `dst`, returning a mutable reference to
+/// the now initialized contents of `dst`.
+///
+/// # Panics
+///
+/// This function will panic if the two slices have different lengths.
+///
+/// Copy of `<[MaybeUninit<T>]>::write_copy_of_slice`, stable since 1.93.
+fn write_copy_of_slice<'a, T: Copy>(dst: &'a mut [MaybeUninit<T>], src: &[T]) -> &'a mut [T] {
+    // SAFETY: `MaybeUninit<T>` has the same layout as `T`, and any
+    // initialized `T` is a valid `MaybeUninit<T>`.
+    let src: &[MaybeUninit<T>] = unsafe { &*(src as *const [T] as *const [MaybeUninit<T>]) };
+    dst.copy_from_slice(src);
+    // SAFETY: `dst` was just initialized from `src`.
+    unsafe { slice_assume_init_mut(dst) }
+}
+
 /// Copy of currently-unstable `MaybeUninit::slice_assume_init_ref`.
 unsafe fn slice_assume_init_ref<T>(slice: &[MaybeUninit<T>]) -> &[T] {
     // SAFETY: casting `slice` to a `*const [T]` is safe since the caller guarantees that
@@ -2691,6 +2817,115 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_extend_back_wraps_and_saturates() {
+        let mut tester: ArrayDeque<_, 8> = ArrayDeque::new();
+        tester.extend_back(0..6);
+        for _ in 0..4 {
+            tester.pop_front();
+        }
+        // Live: [4, 5] at indices 4, 5. Free: 6..8 then 0..4.
+        tester.extend_back(10..20);
+        assert_eq!(tester.len(), 8);
+        assert!(tester.iter().eq([4, 5, 10, 11, 12, 13, 14, 15].iter()));
+        tester.extend_back(99..100);
+        assert_eq!(tester.len(), 8);
+        assert_eq!(tester.back(), Some(&15));
+    }
+
+    #[test]
+    fn test_extend_back_when_elements_wrap() {
+        let mut tester: ArrayDeque<_, 4> = ArrayDeque::new();
+        tester.extend_back(1..4);
+        tester.drain(..);
+        // tail = 3, len = 0; the next two land at indices 3 and 0.
+        tester.extend_back(4..6);
+        assert!(tester.iter().eq([4, 5].iter()));
+        // Free capacity is now the single region 1..3.
+        tester.extend_back(6..9);
+        assert!(tester.iter().eq([4, 5, 6, 7].iter()));
+    }
+
+    #[test]
+    fn test_extend_back_stops_pulling_when_full() {
+        let mut tester: ArrayDeque<_, 3> = ArrayDeque::new();
+        let mut iter = 0..10;
+        tester.extend_back(&mut iter);
+        assert!(tester.iter().eq([0, 1, 2].iter()));
+        assert_eq!(iter.next(), Some(3));
+        // Full with the elements ending exactly at the end of storage: a
+        // further extend must not touch the first element.
+        tester.extend_back(&mut iter);
+        assert!(tester.iter().eq([0, 1, 2].iter()));
+        assert_eq!(iter.next(), Some(4));
+    }
+
+    #[test]
+    fn test_extend_back_panic_keeps_written_elements() {
+        use std::cell::Cell;
+        use std::panic::{catch_unwind, AssertUnwindSafe};
+
+        let flag = &Cell::new(0);
+
+        struct Bump<'a>(&'a Cell<i32>);
+
+        impl<'a> Drop for Bump<'a> {
+            fn drop(&mut self) {
+                let n = self.0.get();
+                self.0.set(n + 1);
+            }
+        }
+
+        let mut tester = ArrayDeque::<Bump, 8>::new();
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            tester.extend_back((0..).map(|i| {
+                if i == 3 {
+                    panic!("iterator panicked");
+                }
+                Bump(flag)
+            }));
+        }));
+        assert!(result.is_err());
+        assert_eq!(tester.len(), 3);
+        assert_eq!(flag.get(), 0);
+        drop(tester);
+        assert_eq!(flag.get(), 3);
+    }
+
+    #[test]
+    fn test_extend_back_from_slice() {
+        let mut tester: ArrayDeque<_, 8> = ArrayDeque::new();
+        tester.extend_back_from_slice(&[0, 1, 2, 3, 4, 5]);
+        for _ in 0..4 {
+            tester.pop_front();
+        }
+        // Live: [4, 5] at indices 4, 5. Six of ten fit, across both regions.
+        tester.extend_back_from_slice(&[10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
+        assert_eq!(tester.len(), 8);
+        assert!(tester.iter().eq([4, 5, 10, 11, 12, 13, 14, 15].iter()));
+        tester.extend_back_from_slice(&[99]);
+        assert_eq!(tester.len(), 8);
+        for _ in 0..7 {
+            tester.pop_front();
+        }
+        // tail = 3 (wrapped), live [15]; free is 4..8 then 0..3.
+        tester.extend_back_from_slice(&[7, 8]);
+        assert!(tester.iter().eq([15, 7, 8].iter()));
+    }
+
+    #[test]
+    fn test_extend_back_from_slice_when_elements_wrap() {
+        let mut tester: ArrayDeque<_, 4> = ArrayDeque::new();
+        tester.extend_back_from_slice(&[1, 2, 3]);
+        tester.drain(..);
+        tester.extend_back_from_slice(&[4, 5]);
+        assert!(tester.iter().eq([4, 5].iter()));
+        tester.extend_back_from_slice(&[6, 7, 8]);
+        assert!(tester.iter().eq([4, 5, 6, 7].iter()));
+        tester.extend_back_from_slice(&[9]);
+        assert!(tester.iter().eq([4, 5, 6, 7].iter()));
     }
 
     #[test]
